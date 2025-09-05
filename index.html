@@ -82,6 +82,7 @@
         .character-card.selected {
             box-shadow: 0 0 15px currentColor;
         }
+        
     </style>
 </head>
 <body class="bg-black text-white flex flex-col h-screen p-2 md:p-4 gap-2 md:gap-4">
@@ -2476,9 +2477,16 @@ document.addEventListener('DOMContentLoaded', function() {
         startButton.addEventListener('click', () => {
             if (!selectedCharacter) return;
             introScreen.classList.add('hidden');
+            // Show overlays when starting the game
+            document.getElementById('miniMapOverlay').style.display = 'block';
+            document.getElementById('levelOverlay').style.display = 'block';
             gameState.paused = false;
             logMessage("Find your missing friends and light three bonfires to signal for rescue.", "#f6e05e");
         });
+        
+        // Hide overlays initially when character selection screen is visible
+        document.getElementById('miniMapOverlay').style.display = 'none';
+        document.getElementById('levelOverlay').style.display = 'none';
         
         generateWorld();
         spawnInitialAnimals();
