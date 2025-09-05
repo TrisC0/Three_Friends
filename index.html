@@ -1365,7 +1365,7 @@ function handleInput() {
                 !isPositionOccupied(newX, newY)) {
                 player.x = newX;
                 player.y = newY;
-                player.moveCooldown = 12;
+                player.moveCooldown = 20;
                 depleteEnergy(0.2 / 12);
             }
         }
@@ -1448,6 +1448,68 @@ function spawnInitialAnimals() {
     try {
         const initialCount = 6 + Math.floor(Math.random() * 5);
         spawnAnimals(initialCount);
+        
+        // Spawn a test brown bear near the player
+        const playerX = gameState.player.x;
+        const playerY = gameState.player.y;
+        const bearX = playerX + Math.floor(Math.random() * 5) - 2; // Within 2 tiles
+        const bearY = playerY + Math.floor(Math.random() * 5) - 2; // Within 2 tiles
+        
+        if (bearX >= 0 && bearX < MAP_SIZE && bearY >= 0 && bearY < MAP_SIZE && 
+            gameState.world[bearY][bearX] === TILES.GRASS && !isPositionOccupied(bearX, bearY)) {
+            
+            const testBear = {
+                x: bearX,
+                y: bearY,
+                type: 'bear',
+                hp: 20,
+                maxHp: 20,
+                state: 'wander',
+                wanderTarget: { x: null, y: null },
+                isMoving: false,
+                direction: 'down',
+                walkCycle: 0,
+                lastHitTimer: 0,
+                lastMoveX: 0,
+                lastMoveY: 1
+            };
+            
+            gameState.animals.push(testBear);
+            logMessage("A brown bear appears nearby for testing!", '#8b4513');
+        }
+        
+        // Spawn a test grey wolf near the player
+        const wolfX = playerX + Math.floor(Math.random() * 5) - 2; // Within 2 tiles
+        const wolfY = playerY + Math.floor(Math.random() * 5) - 2; // Within 2 tiles
+        
+        if (wolfX >= 0 && wolfX < MAP_SIZE && wolfY >= 0 && wolfY < MAP_SIZE && 
+            gameState.world[wolfY][wolfX] === TILES.GRASS && !isPositionOccupied(wolfX, wolfY)) {
+            
+            const testWolf = {
+                x: wolfX,
+                y: wolfY,
+                type: 'wolf',
+                hp: 15,
+                maxHp: 15,
+                state: 'wander',
+                wanderTarget: { x: null, y: null },
+                isMoving: false,
+                direction: 'down',
+                walkCycle: 0,
+                lastHitTimer: 0,
+                lastMoveX: 0,
+                lastMoveY: 1,
+                packId: null,
+                isPackLeader: false,
+                packTarget: { x: null, y: null },
+                smellRange: 12,
+                lastSmellCheck: 0
+            };
+            
+            gameState.animals.push(testWolf);
+            logMessage("A grey wolf appears nearby for testing!", '#696969');
+        }
+        
         logMessage(`The wilderness stirs with ${initialCount} creatures...`, '#e5c07b');
     } catch (error) {
         console.error("Error in spawnInitialAnimals:", error);
@@ -1685,6 +1747,10 @@ function updateAnimals() {
                 animal.isMoving = false;
             } else {
                 animal.isMoving = true;
+                // Store last movement direction for sprite facing
+                animal.lastMoveX = dx;
+                animal.lastMoveY = dy;
+                
                 animal.walkCycle = (animal.walkCycle + 0.2) % (Math.PI * 2);
                 if (Math.abs(dx) > Math.abs(dy)) animal.direction = dx > 0 ? 'right' : 'left';
                 else animal.direction = dy > 0 ? 'down' : 'up';
@@ -1849,7 +1915,7 @@ function updateCamera() {
 // --- Drawing ---
 
 function drawBearSprite(x, y) {
-    const PIXEL_SIZE = 4;
+    const PIXEL_SIZE = 8; // 2x pixel size for 2x scaling
     const SPRITE_WIDTH = 16;
     const SPRITE_OFFSET_X = TILE_SIZE / 2 - (SPRITE_WIDTH * PIXEL_SIZE) / 2;
     const SPRITE_OFFSET_Y = 10;
@@ -1893,7 +1959,7 @@ function drawBearSprite(x, y) {
 }
 
 function drawWolfSprite(x, y) {
-    const PIXEL_SIZE = 4;
+    const PIXEL_SIZE = 8; // 2x pixel size for 2x scaling
     const SPRITE_WIDTH = 16;
     const SPRITE_OFFSET_X = TILE_SIZE / 2 - (SPRITE_WIDTH * PIXEL_SIZE) / 2;
     const SPRITE_OFFSET_Y = 10;
@@ -1993,6 +2059,35 @@ function loadAllSprites() {
         { name: 'tris_idle_west_2', path: 'sprites/characters/tris/animations/breathing-idle/west/frame_002.png' },
         { name: 'tris_idle_west_3', path: 'sprites/characters/tris/animations/breathing-idle/west/frame_003.png' },
         
+        // Brown bear sprites
+        { name: 'brown_bear_north', path: 'sprites/animals/brown_bear/rotations/north.png' },
+        { name: 'brown_bear_south', path: 'sprites/animals/brown_bear/rotations/south.png' },
+        { name: 'brown_bear_east', path: 'sprites/animals/brown_bear/rotations/east.png' },
+        { name: 'brown_bear_west', path: 'sprites/animals/brown_bear/rotations/west.png' },
+        { name: 'brown_bear_north_east', path: 'sprites/animals/brown_bear/rotations/north-east.png' },
+        { name: 'brown_bear_north_west', path: 'sprites/animals/brown_bear/rotations/north-west.png' },
+        { name: 'brown_bear_south_east', path: 'sprites/animals/brown_bear/rotations/south-east.png' },
+        { name: 'brown_bear_south_west', path: 'sprites/animals/brown_bear/rotations/south-west.png' },
+        
+        // Brown bear attack animations (cross-punch for attacking)
+        { name: 'brown_bear_attack_south', path: 'sprites/animals/brown_bear/animations/cross-punch/south/frame_000.png' },
+        
+        // Grey wolf sprites
+        { name: 'grey_wolf_north', path: 'sprites/animals/grey_wolf/rotations/north.png' },
+        { name: 'grey_wolf_south', path: 'sprites/animals/grey_wolf/rotations/south.png' },
+        { name: 'grey_wolf_east', path: 'sprites/animals/grey_wolf/rotations/east.png' },
+        { name: 'grey_wolf_west', path: 'sprites/animals/grey_wolf/rotations/west.png' },
+        { name: 'grey_wolf_north_east', path: 'sprites/animals/grey_wolf/rotations/north-east.png' },
+        { name: 'grey_wolf_north_west', path: 'sprites/animals/grey_wolf/rotations/north-west.png' },
+        { name: 'grey_wolf_south_east', path: 'sprites/animals/grey_wolf/rotations/south-east.png' },
+        { name: 'grey_wolf_south_west', path: 'sprites/animals/grey_wolf/rotations/south-west.png' },
+        
+        // Grey wolf attack animations (cross-punch for attacking)
+        { name: 'grey_wolf_attack_north', path: 'sprites/animals/grey_wolf/animations/cross-punch/north/frame_000.png' },
+        { name: 'grey_wolf_attack_south', path: 'sprites/animals/grey_wolf/animations/cross-punch/south/frame_000.png' },
+        { name: 'grey_wolf_attack_east', path: 'sprites/animals/grey_wolf/animations/cross-punch/east/frame_000.png' },
+        { name: 'grey_wolf_attack_west', path: 'sprites/animals/grey_wolf/animations/cross-punch/west/frame_000.png' },
+        
         // Other characters (fallback)
         { name: 'dave_down', path: 'sprites/characters/dave_down.png' },
         { name: 'rob_down', path: 'sprites/characters/rob_down.png' },
@@ -2035,7 +2130,12 @@ function drawPlayerSprite(x, y, frame) { // Tris, The Engineer (Player)
     
     // Check if sprite is loaded
     if (spriteImages[spriteName]) {
-        ctx.drawImage(spriteImages[spriteName], x, y, TILE_SIZE, TILE_SIZE);
+        // Draw character larger than tile size for better visibility
+        const scale = 2.0; // Make character 2x bigger (good for higher res sprites)
+        const scaledSize = TILE_SIZE * scale;
+        const offsetX = x - (scaledSize - TILE_SIZE) / 2;
+        const offsetY = y - (scaledSize - TILE_SIZE) / 2;
+        ctx.drawImage(spriteImages[spriteName], offsetX, offsetY, scaledSize, scaledSize);
     } else {
         // Fallback to simple colored rectangle if sprite not loaded
         ctx.fillStyle = '#4a5d2a'; // Tris's cloak color
@@ -2046,7 +2146,7 @@ function drawPlayerSprite(x, y, frame) { // Tris, The Engineer (Player)
 }
 
 function drawRobSprite(x, y, frame) { // Rob, The Sentinel (Friend 1)
-    const PIXEL_SIZE = 4; // Standard pixel size
+    const PIXEL_SIZE = 8; // 2x pixel size for 2x scaling
     const SPRITE_WIDTH = 16; // Standard sprite size
     const SPRITE_OFFSET_X = TILE_SIZE / 2 - (SPRITE_WIDTH * PIXEL_SIZE) / 2;
     const SPRITE_OFFSET_Y = 10;
@@ -2121,7 +2221,7 @@ function drawRobSprite(x, y, frame) { // Rob, The Sentinel (Friend 1)
 }
 
 function drawTrisSprite(x, y, frame) { // Tris, The Architect (Friend 2)
-    const PIXEL_SIZE = 4; // Standard pixel size
+    const PIXEL_SIZE = 8; // 2x pixel size for 2x scaling
     const SPRITE_WIDTH = 16; // Standard sprite size
     const SPRITE_OFFSET_X = TILE_SIZE / 2 - (SPRITE_WIDTH * PIXEL_SIZE) / 2;
     const SPRITE_OFFSET_Y = 10;
@@ -2455,12 +2555,35 @@ function draw() {
     }
     drawPlayerSprite(px, py, frame);
 
-    // Draw NPCs
-    drawRobSprite(gameState.rob.x * TILE_SIZE, gameState.rob.y * TILE_SIZE, `standing_down`);
-    if(gameState.rob.speechBubble.visible) drawSpeechBubble(gameState.rob.x * TILE_SIZE, gameState.rob.y * TILE_SIZE, gameState.rob.speechBubble.message);
+    // Draw NPCs with 2x scaling
+    const robX = gameState.rob.x * TILE_SIZE;
+    const robY = gameState.rob.y * TILE_SIZE;
+    const trisX = gameState.tris.x * TILE_SIZE;
+    const trisY = gameState.tris.y * TILE_SIZE;
     
-    drawTrisSprite(gameState.tris.x * TILE_SIZE, gameState.tris.y * TILE_SIZE, `standing_down`);
-    if(gameState.tris.speechBubble.visible) drawSpeechBubble(gameState.tris.x * TILE_SIZE, gameState.tris.y * TILE_SIZE, gameState.tris.speechBubble.message);
+    // Draw Rob with 2x scaling
+    if (spriteImages['rob_down']) {
+        const scale = 2.0;
+        const scaledSize = TILE_SIZE * scale;
+        const offsetX = robX - (scaledSize - TILE_SIZE) / 2;
+        const offsetY = robY - (scaledSize - TILE_SIZE) / 2;
+        ctx.drawImage(spriteImages['rob_down'], offsetX, offsetY, scaledSize, scaledSize);
+    } else {
+        drawRobSprite(robX, robY, `standing_down`);
+    }
+    if(gameState.rob.speechBubble.visible) drawSpeechBubble(robX, robY, gameState.rob.speechBubble.message);
+    
+    // Draw Tris with 2x scaling
+    if (spriteImages['tris_south']) {
+        const scale = 2.0;
+        const scaledSize = TILE_SIZE * scale;
+        const offsetX = trisX - (scaledSize - TILE_SIZE) / 2;
+        const offsetY = trisY - (scaledSize - TILE_SIZE) / 2;
+        ctx.drawImage(spriteImages['tris_south'], offsetX, offsetY, scaledSize, scaledSize);
+    } else {
+        drawTrisSprite(trisX, trisY, `standing_down`);
+    }
+    if(gameState.tris.speechBubble.visible) drawSpeechBubble(trisX, trisY, gameState.tris.speechBubble.message);
 
     // Draw animals and their health bars
     gameState.animals.forEach(animal => {
@@ -2469,23 +2592,67 @@ function draw() {
         
         // Draw proper animal sprite based on type
         if (animal.type === 'bear') {
-            if (spriteImages['bear']) {
-                ctx.drawImage(spriteImages['bear'], ax, ay, TILE_SIZE, TILE_SIZE);
+            // Determine bear direction based on movement or default to south
+            let bearDirection = 'south';
+            if (animal.lastMoveX !== undefined && animal.lastMoveY !== undefined) {
+                if (animal.lastMoveY < 0) bearDirection = 'north';
+                else if (animal.lastMoveY > 0) bearDirection = 'south';
+                else if (animal.lastMoveX < 0) bearDirection = 'west';
+                else if (animal.lastMoveX > 0) bearDirection = 'east';
+            }
+            
+            // Check if bear is attacking the player (same position)
+            const isAttacking = animal.x === gameState.player.x && animal.y === gameState.player.y;
+            let bearSpriteName;
+            
+            if (isAttacking) {
+                // Use attack sprite (only south available, so use it for all directions)
+                bearSpriteName = 'brown_bear_attack_south';
+            } else {
+                // Use normal direction-based sprite
+                bearSpriteName = `brown_bear_${bearDirection}`;
+            }
+            
+            if (spriteImages[bearSpriteName]) {
+                // Draw bear at 2x scale to match player
+                const scale = 2.0;
+                const scaledSize = TILE_SIZE * scale;
+                const offsetX = ax - (scaledSize - TILE_SIZE) / 2;
+                const offsetY = ay - (scaledSize - TILE_SIZE) / 2;
+                ctx.drawImage(spriteImages[bearSpriteName], offsetX, offsetY, scaledSize, scaledSize);
             } else {
                 drawBearSprite(ax, ay); // Fallback to pixel art
             }
         } else if (animal.type === 'wolf') {
-            if (spriteImages['wolf']) {
-                ctx.drawImage(spriteImages['wolf'], ax, ay, TILE_SIZE, TILE_SIZE);
+            // Determine wolf direction based on movement or default to south
+            let wolfDirection = 'south';
+            if (animal.lastMoveX !== undefined && animal.lastMoveY !== undefined) {
+                if (animal.lastMoveY < 0) wolfDirection = 'north';
+                else if (animal.lastMoveY > 0) wolfDirection = 'south';
+                else if (animal.lastMoveX < 0) wolfDirection = 'west';
+                else if (animal.lastMoveX > 0) wolfDirection = 'east';
+            }
+            
+            // Check if wolf is attacking the player (same position)
+            const isAttacking = animal.x === gameState.player.x && animal.y === gameState.player.y;
+            const wolfSpriteName = isAttacking ? `grey_wolf_attack_${wolfDirection}` : `grey_wolf_${wolfDirection}`;
+            
+            if (spriteImages[wolfSpriteName]) {
+                // Draw wolf at 2x scale to match player
+                const scale = 2.0;
+                const scaledSize = TILE_SIZE * scale;
+                const offsetX = ax - (scaledSize - TILE_SIZE) / 2;
+                const offsetY = ay - (scaledSize - TILE_SIZE) / 2;
+                ctx.drawImage(spriteImages[wolfSpriteName], offsetX, offsetY, scaledSize, scaledSize);
             } else {
                 drawWolfSprite(ax, ay); // Fallback to pixel art
             }
         } else {
             // Fallback for other animal types
-            ctx.fillStyle = 'red';
-            ctx.beginPath();
-            ctx.arc(ax + TILE_SIZE / 2, ay + TILE_SIZE / 2, TILE_SIZE / 4, 0, Math.PI * 2);
-            ctx.fill();
+        ctx.fillStyle = 'red';
+        ctx.beginPath();
+        ctx.arc(ax + TILE_SIZE / 2, ay + TILE_SIZE / 2, TILE_SIZE / 4, 0, Math.PI * 2);
+        ctx.fill();
         }
         
         if(animal.lastHitTimer > 0) {
@@ -2710,7 +2877,7 @@ function resizeCanvas() {
 
 document.addEventListener('DOMContentLoaded', function() {
     try {
-        // Load all sprites - Updated sprite paths v4 (added breathing-idle frame cycling)
+        // Load all sprites - Updated sprite paths v9 (added brown bear attack sprites)
         loadAllSprites().then(() => {
             console.log('All sprites loaded successfully');
         }).catch(error => {
