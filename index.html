@@ -1975,11 +1975,23 @@ function loadAllSprites() {
         { name: 'tris_attack_east', path: 'sprites/characters/tris/animations/cross-punch/east/frame_000.png' },
         { name: 'tris_attack_west', path: 'sprites/characters/tris/animations/cross-punch/west/frame_000.png' },
         
-        // Tris breathing-idle animations (for standing/idle)
-        { name: 'tris_idle_north', path: 'sprites/characters/tris/animations/breathing-idle/north/frame_000.png' },
-        { name: 'tris_idle_south', path: 'sprites/characters/tris/animations/breathing-idle/south/frame_000.png' },
-        { name: 'tris_idle_east', path: 'sprites/characters/tris/animations/breathing-idle/east/frame_000.png' },
-        { name: 'tris_idle_west', path: 'sprites/characters/tris/animations/breathing-idle/west/frame_000.png' },
+        // Tris breathing-idle animations (for standing/idle) - all frames
+        { name: 'tris_idle_north_0', path: 'sprites/characters/tris/animations/breathing-idle/north/frame_000.png' },
+        { name: 'tris_idle_north_1', path: 'sprites/characters/tris/animations/breathing-idle/north/frame_001.png' },
+        { name: 'tris_idle_north_2', path: 'sprites/characters/tris/animations/breathing-idle/north/frame_002.png' },
+        { name: 'tris_idle_north_3', path: 'sprites/characters/tris/animations/breathing-idle/north/frame_003.png' },
+        { name: 'tris_idle_south_0', path: 'sprites/characters/tris/animations/breathing-idle/south/frame_000.png' },
+        { name: 'tris_idle_south_1', path: 'sprites/characters/tris/animations/breathing-idle/south/frame_001.png' },
+        { name: 'tris_idle_south_2', path: 'sprites/characters/tris/animations/breathing-idle/south/frame_002.png' },
+        { name: 'tris_idle_south_3', path: 'sprites/characters/tris/animations/breathing-idle/south/frame_003.png' },
+        { name: 'tris_idle_east_0', path: 'sprites/characters/tris/animations/breathing-idle/east/frame_000.png' },
+        { name: 'tris_idle_east_1', path: 'sprites/characters/tris/animations/breathing-idle/east/frame_001.png' },
+        { name: 'tris_idle_east_2', path: 'sprites/characters/tris/animations/breathing-idle/east/frame_002.png' },
+        { name: 'tris_idle_east_3', path: 'sprites/characters/tris/animations/breathing-idle/east/frame_003.png' },
+        { name: 'tris_idle_west_0', path: 'sprites/characters/tris/animations/breathing-idle/west/frame_000.png' },
+        { name: 'tris_idle_west_1', path: 'sprites/characters/tris/animations/breathing-idle/west/frame_001.png' },
+        { name: 'tris_idle_west_2', path: 'sprites/characters/tris/animations/breathing-idle/west/frame_002.png' },
+        { name: 'tris_idle_west_3', path: 'sprites/characters/tris/animations/breathing-idle/west/frame_003.png' },
         
         // Other characters (fallback)
         { name: 'dave_down', path: 'sprites/characters/dave_down.png' },
@@ -2016,8 +2028,9 @@ function drawPlayerSprite(x, y, frame) { // Tris, The Engineer (Player)
         // Walking animation
         spriteName = `tris_walk_${direction}`;
     } else {
-        // Standing/idle - use breathing-idle animation
-        spriteName = `tris_idle_${direction}`;
+        // Standing/idle - use breathing-idle animation with frame cycling
+        const breathingFrame = Math.floor((Date.now() / 1000) * 2) % 4; // Cycle through 0-3 every 2 seconds
+        spriteName = `tris_idle_${direction}_${breathingFrame}`;
     }
     
     // Check if sprite is loaded
@@ -2697,7 +2710,7 @@ function resizeCanvas() {
 
 document.addEventListener('DOMContentLoaded', function() {
     try {
-        // Load all sprites - Updated sprite paths v3 (added breathing-idle)
+        // Load all sprites - Updated sprite paths v4 (added breathing-idle frame cycling)
         loadAllSprites().then(() => {
             console.log('All sprites loaded successfully');
         }).catch(error => {
