@@ -166,14 +166,20 @@
                 </div>
             </div>
             
-            <!-- Level Overlay -->
-            <div id="levelOverlay" class="absolute top-4 left-4 z-40 bg-gray-900 bg-opacity-90 p-3 rounded-lg border border-gray-600">
-                <div class="text-center">
-                    <div class="text-sm text-yellow-400 mb-1">⭐ LEVEL <span id="levelDisplay">1</span></div>
-                    <div class="text-xs text-green-400 mb-2">XP: <span id="xpDisplay">0</span></div>
-                    <div class="stat-bar-bg h-2 w-full"><div id="xpBar" class="stat-bar bg-green-500" style="width: 0%;"></div></div>
-                </div>
+                    <!-- Level Overlay -->
+        <div id="levelOverlay" class="absolute top-4 left-4 z-40 bg-gray-900 bg-opacity-90 p-3 rounded-lg border border-gray-600">
+            <div class="text-center">
+                <div class="text-sm text-yellow-400 mb-1">⭐ LEVEL <span id="levelDisplay">1</span></div>
+                <div class="text-xs text-green-400 mb-2">XP: <span id="xpDisplay">0</span></div>
+                <div class="stat-bar-bg h-2 w-full"><div id="xpBar" class="stat-bar bg-green-500" style="width: 0%;"></div></div>
             </div>
+        </div>
+        
+        <!-- Zoom Controls - Disabled -->
+        <!-- <div class="absolute top-4 right-4 z-40 bg-gray-900 bg-opacity-90 p-2 rounded-lg border border-gray-600">
+            <div class="text-xs text-gray-300 mb-1">Zoom: <span id="zoomDisplay">100%</span></div>
+            <div class="text-xs text-gray-400">+/- to zoom, 0 to reset</div>
+        </div> -->
             
             
             <!-- Gameplay Message Overlay -->
@@ -394,6 +400,7 @@ const introScreen = document.getElementById('introScreen');
 const gameOverScreen = document.getElementById('gameOverScreen');
 const gameOverReason = document.getElementById('gameOverReason');
 const victoryScreen = document.getElementById('victoryScreen');
+const zoomDisplay = document.getElementById('zoomDisplay');
 
 // Gameplay message overlay elements
 const gameplayMessage1 = document.getElementById('message1');
@@ -406,6 +413,12 @@ const TILE_SIZE = 64;
 const MAP_SIZE = 110; // Increased map size for a larger world
 let viewportTileCountX = 11;
 let viewportTileCountY = 11;
+
+// Camera zoom configuration - Disabled for now
+let cameraZoom = 1.0; // Fixed at 100% zoom
+const MIN_ZOOM = 1.0;
+const MAX_ZOOM = 1.0; // No zoom allowed
+const ZOOM_SPEED = 0.1; // Not used
 
 const TILES = {
     GRASS: 0,
@@ -1311,6 +1324,20 @@ function handleInput() {
     if (keysPressed['a'] || keysPressed['ArrowLeft']) moveX--;
     if (keysPressed['d'] || keysPressed['ArrowRight']) moveX++;
     
+    // Zoom controls - Disabled
+    // if (keysPressed['='] || keysPressed['+']) {
+    //     cameraZoom = Math.min(MAX_ZOOM, cameraZoom + ZOOM_SPEED);
+    //     resizeCanvas();
+    // }
+    // if (keysPressed['-'] || keysPressed['_']) {
+    //     cameraZoom = Math.max(MIN_ZOOM, cameraZoom - ZOOM_SPEED);
+    //     resizeCanvas();
+    // }
+    // if (keysPressed['0']) {
+    //     cameraZoom = 1.0;
+    //     resizeCanvas();
+    // }
+    
     if (moveX !== 0 || moveY !== 0) {
         player.isMoving = true;
         
@@ -1821,19 +1848,17 @@ function updateCamera() {
 
 // --- Drawing ---
 
-function drawPlayerSprite(x, y, frame) { // Dave, The Seeker (Player)
-    const PIXEL_SIZE = 4; 
+function drawBearSprite(x, y) {
+    const PIXEL_SIZE = 4;
     const SPRITE_WIDTH = 16;
     const SPRITE_OFFSET_X = TILE_SIZE / 2 - (SPRITE_WIDTH * PIXEL_SIZE) / 2;
     const SPRITE_OFFSET_Y = 10;
 
     const colors = {
-        cloakGreen: '#3a5f45', darkCloakGreen: '#2a4f35',
-        shirtTan: '#c2b280', pantsBrown: '#654321',
-        skin: '#fde3a7', darkSkin: '#e0c282',
-        beardRed: '#a0522d', darkBeardRed: '#8b4513',
-        black: '#212121',
-        toolHandle: '#966F33', toolHead: '#a9a9a9', swordBlade: '#dadada',
+        fur: '#8b4513', darkFur: '#654321', // Brown fur
+        nose: '#000000', // Black nose
+        eyes: '#000000', // Black eyes
+        claws: '#ffffff', // White claws
     };
 
     ctx.save();
@@ -1843,57 +1868,142 @@ function drawPlayerSprite(x, y, frame) { // Dave, The Seeker (Player)
         ctx.fillRect(px * PIXEL_SIZE, py * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
     };
     
-    // Base standing down sprite
-    const baseSprite = [
+    // Bear sprite
+    const bearSprite = [
         // Head
-        [5,2,colors.skin],[6,2,colors.skin],[7,2,colors.skin],[8,2,colors.skin],[9,2,colors.skin],[10,2,colors.skin],
-        [4,3,colors.skin],[5,3,colors.black],[6,3,colors.skin],[7,3,colors.skin],[8,3,colors.skin],[9,3,colors.black],[10,3,colors.skin],
-        [4,4,colors.beardRed],[5,4,colors.beardRed],[6,4,colors.beardRed],[7,4,colors.beardRed],[8,4,colors.beardRed],[9,4,colors.beardRed],[10,4,colors.beardRed],
-        [5,5,colors.darkBeardRed],[6,5,colors.darkBeardRed],[7,5,colors.darkBeardRed],[8,5,colors.darkBeardRed],[9,5,colors.darkBeardRed],
+        [4,2,colors.fur],[5,2,colors.fur],[6,2,colors.fur],[7,2,colors.fur],[8,2,colors.fur],[9,2,colors.fur],[10,2,colors.fur],[11,2,colors.fur],
+        [3,3,colors.fur],[4,3,colors.fur],[5,3,colors.fur],[6,3,colors.fur],[7,3,colors.fur],[8,3,colors.fur],[9,3,colors.fur],[10,3,colors.fur],[11,3,colors.fur],[12,3,colors.fur],
+        [3,4,colors.fur],[4,4,colors.eyes],[5,4,colors.fur],[6,4,colors.fur],[7,4,colors.fur],[8,4,colors.fur],[9,4,colors.fur],[10,4,colors.eyes],[11,4,colors.fur],[12,4,colors.fur],
+        [3,5,colors.fur],[4,5,colors.fur],[5,5,colors.fur],[6,5,colors.fur],[7,5,colors.nose],[8,5,colors.fur],[9,5,colors.fur],[10,5,colors.fur],[11,5,colors.fur],[12,5,colors.fur],
+        [4,6,colors.fur],[5,6,colors.fur],[6,6,colors.fur],[7,6,colors.fur],[8,6,colors.fur],[9,6,colors.fur],[10,6,colors.fur],[11,6,colors.fur],
         // Body
-        [4,6,colors.cloakGreen],[5,6,colors.cloakGreen],[6,6,colors.cloakGreen],[7,6,colors.cloakGreen],[8,6,colors.cloakGreen],[9,6,colors.cloakGreen],[10,6,colors.cloakGreen],[11,6,colors.cloakGreen],
-        [3,7,colors.cloakGreen],[4,7,colors.darkCloakGreen],[5,7,colors.shirtTan],[6,7,colors.shirtTan],[7,7,colors.shirtTan],[8,7,colors.shirtTan],[9,7,colors.shirtTan],[10,7,colors.darkCloakGreen],[11,7,colors.cloakGreen],[12,7,colors.cloakGreen],
-        [3,8,colors.darkCloakGreen],[4,8,colors.darkCloakGreen],[5,8,colors.shirtTan],[6,8,colors.shirtTan],[7,8,colors.shirtTan],[8,8,colors.shirtTan],[9,8,colors.shirtTan],[10,8,colors.darkCloakGreen],[11,8,colors.darkCloakGreen],
-        [4,9,colors.darkCloakGreen],[5,9,colors.pantsBrown],[6,9,colors.pantsBrown],[7,9,colors.pantsBrown],[8,9,colors.pantsBrown],[9,9,colors.pantsBrown],[10,9,colors.darkCloakGreen],
-        [4,10,colors.pantsBrown],[5,10,colors.pantsBrown],[6,10,colors.pantsBrown],[7,10,colors.pantsBrown],[8,10,colors.pantsBrown],[9,10,colors.pantsBrown],[10,10,colors.pantsBrown],
-        [5,11,colors.pantsBrown],[6,11,colors.pantsBrown],[8,11,colors.pantsBrown],[9,11,colors.pantsBrown],
+        [5,7,colors.fur],[6,7,colors.fur],[7,7,colors.fur],[8,7,colors.fur],[9,7,colors.fur],[10,7,colors.fur],
+        [4,8,colors.fur],[5,8,colors.fur],[6,8,colors.fur],[7,8,colors.fur],[8,8,colors.fur],[9,8,colors.fur],[10,8,colors.fur],[11,8,colors.fur],
+        [4,9,colors.fur],[5,9,colors.fur],[6,9,colors.fur],[7,9,colors.fur],[8,9,colors.fur],[9,9,colors.fur],[10,9,colors.fur],[11,9,colors.fur],
+        [5,10,colors.fur],[6,10,colors.fur],[7,10,colors.fur],[8,10,colors.fur],[9,10,colors.fur],[10,10,colors.fur],
+        // Legs
+        [5,11,colors.fur],[6,11,colors.fur],[7,11,colors.fur],[8,11,colors.fur],[9,11,colors.fur],[10,11,colors.fur],
+        [6,12,colors.fur],[7,12,colors.fur],[8,12,colors.fur],[9,12,colors.fur],
+        // Claws
+        [6,13,colors.claws],[7,13,colors.claws],[8,13,colors.claws],[9,13,colors.claws],
     ];
-
-    baseSprite.forEach(([px, py, color]) => p(px, py, color));
     
-    // Add tool if swinging
-    if (frame.includes('using_axe')) {
-        p(12, 6, colors.toolHandle); p(11, 7, colors.toolHandle); p(10, 8, colors.toolHandle);
-        p(13, 4, colors.toolHead); p(13, 5, colors.toolHead); p(12, 5, colors.toolHead);
-    } else if (frame.includes('using_pickaxe')) {
-        p(12, 6, colors.toolHandle); p(11, 7, colors.toolHandle); p(10, 8, colors.toolHandle);
-        p(14, 4, colors.toolHead); p(13, 5, colors.toolHead); p(12, 5, colors.toolHead);
-    } else if (frame.includes('using_sword')) {
-        p(12, 7, colors.toolHandle); p(11, 8, colors.toolHandle);
-        p(13, 6, colors.swordBlade); p(13, 5, colors.swordBlade); p(13, 4, colors.swordBlade);
-    }
-    
-    // Simple walking animation by moving a leg
-    if (frame.includes('walking') && (Math.floor(gameState.playerAnimation.walkCycle / Math.PI) % 2 === 0)) {
-       p(6,12, colors.pantsBrown); p(7,12, colors.pantsBrown);
-    } else if (frame.includes('walking')) {
-       p(8,12, colors.pantsBrown); p(9,12, colors.pantsBrown);
-    }
-
+    bearSprite.forEach(([px, py, color]) => p(px, py, color));
     ctx.restore();
 }
 
-function drawRobSprite(x, y, frame) { // Rob, The Sentinel (Friend 1)
+function drawWolfSprite(x, y) {
     const PIXEL_SIZE = 4;
     const SPRITE_WIDTH = 16;
     const SPRITE_OFFSET_X = TILE_SIZE / 2 - (SPRITE_WIDTH * PIXEL_SIZE) / 2;
     const SPRITE_OFFSET_Y = 10;
 
     const colors = {
-        tunicBlue: '#6a7d9e', darkTunicBlue: '#4a5d7e',
-        pantsGrey: '#5a5a5a',
+        fur: '#696969', darkFur: '#2f2f2f', // Grey fur
+        nose: '#000000', // Black nose
+        eyes: '#000000', // Black eyes
+        belly: '#d3d3d3', // Light grey belly
+    };
+
+    ctx.save();
+    ctx.translate(x + SPRITE_OFFSET_X, y + SPRITE_OFFSET_Y);
+    const p = (px, py, color) => {
+        ctx.fillStyle = color;
+        ctx.fillRect(px * PIXEL_SIZE, py * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
+    };
+    
+    // Wolf sprite
+    const wolfSprite = [
+        // Head
+        [5,2,colors.fur],[6,2,colors.fur],[7,2,colors.fur],[8,2,colors.fur],[9,2,colors.fur],[10,2,colors.fur],
+        [4,3,colors.fur],[5,3,colors.fur],[6,3,colors.fur],[7,3,colors.fur],[8,3,colors.fur],[9,3,colors.fur],[10,3,colors.fur],[11,3,colors.fur],
+        [4,4,colors.fur],[5,4,colors.eyes],[6,4,colors.fur],[7,4,colors.fur],[8,4,colors.fur],[9,4,colors.eyes],[10,4,colors.fur],[11,4,colors.fur],
+        [4,5,colors.fur],[5,5,colors.fur],[6,5,colors.fur],[7,5,colors.nose],[8,5,colors.fur],[9,5,colors.fur],[10,5,colors.fur],[11,5,colors.fur],
+        [5,6,colors.fur],[6,6,colors.fur],[7,6,colors.fur],[8,6,colors.fur],[9,6,colors.fur],[10,6,colors.fur],
+        // Body
+        [5,7,colors.fur],[6,7,colors.fur],[7,7,colors.fur],[8,7,colors.fur],[9,7,colors.fur],[10,7,colors.fur],
+        [4,8,colors.fur],[5,8,colors.belly],[6,8,colors.belly],[7,8,colors.belly],[8,8,colors.belly],[9,8,colors.belly],[10,8,colors.fur],[11,8,colors.fur],
+        [4,9,colors.fur],[5,9,colors.fur],[6,9,colors.fur],[7,9,colors.fur],[8,9,colors.fur],[9,9,colors.fur],[10,9,colors.fur],[11,9,colors.fur],
+        [5,10,colors.fur],[6,10,colors.fur],[7,10,colors.fur],[8,10,colors.fur],[9,10,colors.fur],[10,10,colors.fur],
+        // Legs
+        [5,11,colors.fur],[6,11,colors.fur],[7,11,colors.fur],[8,11,colors.fur],[9,11,colors.fur],[10,11,colors.fur],
+        [6,12,colors.fur],[7,12,colors.fur],[8,12,colors.fur],[9,12,colors.fur],
+    ];
+    
+    wolfSprite.forEach(([px, py, color]) => p(px, py, color));
+    ctx.restore();
+}
+
+// Image sprite system
+const spriteImages = {};
+const spritePromises = [];
+
+function loadSprite(name, path) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+            spriteImages[name] = img;
+            resolve(img);
+        };
+        img.onerror = reject;
+        img.src = path;
+    });
+}
+
+// Load all sprites
+function loadAllSprites() {
+    const sprites = [
+        // Characters
+        { name: 'dave_down', path: 'sprites/characters/dave_down.png' },
+        { name: 'dave_up', path: 'sprites/characters/dave_up.png' },
+        { name: 'dave_left', path: 'sprites/characters/dave_left.png' },
+        { name: 'dave_right', path: 'sprites/characters/dave_right.png' },
+        { name: 'rob_down', path: 'sprites/characters/rob_down.png' },
+        { name: 'tris_down', path: 'sprites/characters/tris_down.png' },
+        // Animals
+        { name: 'bear', path: 'sprites/animals/bear.png' },
+        { name: 'wolf', path: 'sprites/animals/wolf.png' },
+    ];
+    
+    sprites.forEach(sprite => {
+        spritePromises.push(loadSprite(sprite.name, sprite.path));
+    });
+    
+    return Promise.all(spritePromises);
+}
+
+function drawPlayerSprite(x, y, frame) { // Dave, The Seeker (Player)
+    // Determine which sprite to use based on character and direction
+    let spriteName = 'dave_down'; // Default
+    
+    if (frame.includes('up')) spriteName = 'dave_up';
+    else if (frame.includes('left')) spriteName = 'dave_left';
+    else if (frame.includes('right')) spriteName = 'dave_right';
+    else if (frame.includes('down')) spriteName = 'dave_down';
+    
+    // Check if sprite is loaded
+    if (spriteImages[spriteName]) {
+        ctx.drawImage(spriteImages[spriteName], x, y, TILE_SIZE, TILE_SIZE);
+    } else {
+        // Fallback to simple colored rectangle if sprite not loaded
+        ctx.fillStyle = '#4a5d7e';
+        ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+        ctx.fillStyle = '#8b4513';
+        ctx.fillRect(x + 8, y + 8, TILE_SIZE - 16, TILE_SIZE - 16);
+    }
+}
+
+function drawRobSprite(x, y, frame) { // Rob, The Sentinel (Friend 1)
+    const PIXEL_SIZE = 4; // Standard pixel size
+    const SPRITE_WIDTH = 16; // Standard sprite size
+    const SPRITE_OFFSET_X = TILE_SIZE / 2 - (SPRITE_WIDTH * PIXEL_SIZE) / 2;
+    const SPRITE_OFFSET_Y = 10;
+
+    const colors = {
+        tunicGreen: '#4a5d2a', darkTunicGreen: '#3a4d1a', // Dark olive-green tunic
+        pantsBrown: '#8b4513', // Brown pants and boots
         skin: '#fde3a7', darkSkin: '#e0c282',
-        beardBrown: '#5c4033', darkBeardBrown: '#422d21',
+        beardBrown: '#8b4513', darkBeardBrown: '#654321', // Bushy brown beard
         black: '#212121',
     };
     
@@ -1905,35 +2015,72 @@ function drawRobSprite(x, y, frame) { // Rob, The Sentinel (Friend 1)
     };
     
     // Base sprite
-    [   // Head
+    // Rob - The Tank (bald man with bushy beard, dark olive-green tunic)
+    const baseSprite = [
+        // Bald head with bushy beard
         [5,1,colors.skin],[6,1,colors.skin],[7,1,colors.skin],[8,1,colors.skin],[9,1,colors.skin],[10,1,colors.skin],
         [4,2,colors.skin],[5,2,colors.black],[6,2,colors.skin],[7,2,colors.skin],[8,2,colors.skin],[9,2,colors.black],[10,2,colors.skin],
         [3,3,colors.beardBrown],[4,3,colors.beardBrown],[5,3,colors.beardBrown],[6,3,colors.beardBrown],[7,3,colors.beardBrown],[8,3,colors.beardBrown],[9,3,colors.beardBrown],[10,3,colors.beardBrown],[11,3,colors.beardBrown],
         [4,4,colors.darkBeardBrown],[5,4,colors.darkBeardBrown],[6,4,colors.darkBeardBrown],[7,4,colors.darkBeardBrown],[8,4,colors.darkBeardBrown],[9,4,colors.darkBeardBrown],[10,4,colors.darkBeardBrown],
         [5,5,colors.darkBeardBrown],[6,5,colors.darkBeardBrown],[7,5,colors.darkBeardBrown],[8,5,colors.darkBeardBrown],[9,5,colors.darkBeardBrown],
-        // Body
-        [3,6,colors.tunicBlue],[4,6,colors.tunicBlue],[5,6,colors.tunicBlue],[6,6,colors.tunicBlue],[7,6,colors.tunicBlue],[8,6,colors.tunicBlue],[9,6,colors.tunicBlue],[10,6,colors.tunicBlue],[11,6,colors.tunicBlue],
-        [2,7,colors.tunicBlue],[3,7,colors.darkTunicBlue],[4,7,colors.darkTunicBlue],[5,7,colors.darkTunicBlue],[6,7,colors.darkTunicBlue],[7,7,colors.darkTunicBlue],[8,7,colors.darkTunicBlue],[9,7,colors.darkTunicBlue],[10,7,colors.darkTunicBlue],[11,7,colors.darkTunicBlue],[12,7,colors.tunicBlue],
-        [2,8,colors.darkTunicBlue],[3,8,colors.darkTunicBlue],[4,8,colors.darkTunicBlue],[5,8,colors.darkTunicBlue],[6,8,colors.darkTunicBlue],[7,8,colors.darkTunicBlue],[8,8,colors.darkTunicBlue],[9,8,colors.darkTunicBlue],[10,8,colors.darkTunicBlue],[11,8,colors.darkTunicBlue],[12,8,colors.darkTunicBlue],
-        [3,9,colors.darkTunicBlue],[4,9,colors.pantsGrey],[5,9,colors.pantsGrey],[6,9,colors.pantsGrey],[7,9,colors.pantsGrey],[8,9,colors.pantsGrey],[9,9,colors.pantsGrey],[10,9,colors.pantsGrey],[11,9,colors.darkTunicBlue],
-        [4,10,colors.pantsGrey],[5,10,colors.pantsGrey],[6,10,colors.pantsGrey],[8,10,colors.pantsGrey],[9,10,colors.pantsGrey],[10,10,colors.pantsGrey],
-        [4,11,colors.pantsGrey],[5,11,colors.pantsGrey], [9,11,colors.pantsGrey],[10,11,colors.pantsGrey],
-    ].forEach(([px, py, color]) => p(px, py, color));
+        // Body with dark olive-green tunic
+        [3,6,colors.tunicGreen],[4,6,colors.tunicGreen],[5,6,colors.tunicGreen],[6,6,colors.tunicGreen],[7,6,colors.tunicGreen],[8,6,colors.tunicGreen],[9,6,colors.tunicGreen],[10,6,colors.tunicGreen],[11,6,colors.tunicGreen],
+        [2,7,colors.tunicGreen],[3,7,colors.darkTunicGreen],[4,7,colors.darkTunicGreen],[5,7,colors.darkTunicGreen],[6,7,colors.darkTunicGreen],[7,7,colors.darkTunicGreen],[8,7,colors.darkTunicGreen],[9,7,colors.darkTunicGreen],[10,7,colors.darkTunicGreen],[11,7,colors.darkTunicGreen],[12,7,colors.tunicGreen],
+        [2,8,colors.darkTunicGreen],[3,8,colors.darkTunicGreen],[4,8,colors.darkTunicGreen],[5,8,colors.darkTunicGreen],[6,8,colors.darkTunicGreen],[7,8,colors.darkTunicGreen],[8,8,colors.darkTunicGreen],[9,8,colors.darkTunicGreen],[10,8,colors.darkTunicGreen],[11,8,colors.darkTunicGreen],[12,8,colors.darkTunicGreen],
+        [3,9,colors.darkTunicGreen],[4,9,colors.pantsBrown],[5,9,colors.pantsBrown],[6,9,colors.pantsBrown],[7,9,colors.pantsBrown],[8,9,colors.pantsBrown],[9,9,colors.pantsBrown],[10,9,colors.pantsBrown],[11,9,colors.darkTunicGreen],
+        [4,10,colors.pantsBrown],[5,10,colors.pantsBrown],[6,10,colors.pantsBrown],[8,10,colors.pantsBrown],[9,10,colors.pantsBrown],[10,10,colors.pantsBrown],
+        [4,11,colors.pantsBrown],[5,11,colors.pantsBrown],[9,11,colors.pantsBrown],[10,11,colors.pantsBrown],
+    ];
+    
+    baseSprite.forEach(([px, py, color]) => p(px, py, color));
+    
+    // Add detailed facial features for Rob
+    // Eyes with highlights
+    p(5, 2, colors.black);
+    p(9, 2, colors.black);
+    p(4, 2, colors.skin); // Eye whites
+    p(10, 2, colors.skin);
+    
+    // Nose and mouth details
+    p(6, 3, colors.darkSkin);
+    p(7, 3, colors.darkSkin);
+    p(8, 3, colors.darkSkin);
+    p(6, 4, colors.darkSkin);
+    p(7, 4, colors.darkSkin);
+    p(8, 4, colors.darkSkin);
+    
+    // Clothing details
+    p(3, 7, colors.darkTunicBlue);
+    p(12, 7, colors.darkTunicBlue);
+    p(4, 8, colors.darkTunicBlue);
+    p(11, 8, colors.darkTunicBlue);
+    
+    // Belt
+    p(4, 9, colors.black);
+    p(5, 9, colors.black);
+    p(6, 9, colors.black);
+    p(7, 9, colors.black);
+    p(8, 9, colors.black);
+    p(9, 9, colors.black);
+    p(10, 9, colors.black);
+    p(11, 9, colors.black);
 
     ctx.restore();
 }
 
 function drawTrisSprite(x, y, frame) { // Tris, The Architect (Friend 2)
-    const PIXEL_SIZE = 4;
-    const SPRITE_WIDTH = 16;
+    const PIXEL_SIZE = 4; // Standard pixel size
+    const SPRITE_WIDTH = 16; // Standard sprite size
     const SPRITE_OFFSET_X = TILE_SIZE / 2 - (SPRITE_WIDTH * PIXEL_SIZE) / 2;
     const SPRITE_OFFSET_Y = 10;
 
     const colors = {
-        tunicBrown: '#8b5a2b', darkTunicBrown: '#654321',
-        pantsDark: '#3d3d3d',
-        skin: '#fde3a7',
-        beardDark: '#4a4a4a', darkBeardDark: '#303030',
+        cloakGreen: '#4a5d2a', darkCloakGreen: '#3a4d1a', // Dark olive-green hooded cloak
+        pantsBrown: '#8b4513', // Brown pants and boots
+        skin: '#fde3a7', darkSkin: '#e0c282',
+        beardRed: '#8b4513', darkBeardRed: '#654321', // Reddish-brown beard
+        hairBrown: '#654321', // Brown hair
+        glasses: '#000000', // Black glasses frames
         black: '#212121',
     };
 
@@ -1944,21 +2091,47 @@ function drawTrisSprite(x, y, frame) { // Tris, The Architect (Friend 2)
         ctx.fillRect(px * PIXEL_SIZE, py * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
     };
     
-    // Base sprite
-    [   // Head (balding)
-        [6,1,colors.skin],[7,1,colors.skin],[8,1,colors.skin],[9,1,colors.skin],
-        [5,2,colors.skin],[6,2,colors.black],[7,2,colors.skin],[8,2,colors.skin],[9,2,colors.black],[10,2,colors.skin],
-        [4,3,colors.beardDark],[5,3,colors.beardDark],[6,3,colors.beardDark],[7,3,colors.beardDark],[8,3,colors.beardDark],[9,3,colors.beardDark],[10,3,colors.beardDark],[11,3,colors.beardDark],
-        [5,4,colors.darkBeardDark],[6,4,colors.darkBeardDark],[7,4,colors.darkBeardDark],[8,4,colors.darkBeardDark],[9,4,colors.darkBeardDark],[10,4,colors.darkBeardDark],
-        [6,5,colors.darkBeardDark],[7,5,colors.darkBeardDark],[8,5,colors.darkBeardDark],[9,5,colors.darkBeardDark],
-        // Body
-        [4,6,colors.tunicBrown],[5,6,colors.tunicBrown],[6,6,colors.tunicBrown],[7,6,colors.tunicBrown],[8,6,colors.tunicBrown],[9,6,colors.tunicBrown],[10,6,colors.tunicBrown],
-        [3,7,colors.tunicBrown],[4,7,colors.darkTunicBrown],[5,7,colors.darkTunicBrown],[6,7,colors.darkTunicBrown],[7,7,colors.darkTunicBrown],[8,7,colors.darkTunicBrown],[9,7,colors.darkTunicBrown],[10,7,colors.darkTunicBrown],[11,7,colors.tunicBrown],
-        [3,8,colors.darkTunicBrown],[4,8,colors.darkTunicBrown],[5,8,colors.darkTunicBrown],[6,8,colors.darkTunicBrown],[7,8,colors.darkTunicBrown],[8,8,colors.darkTunicBrown],[9,8,colors.darkTunicBrown],[10,8,colors.darkTunicBrown],[11,8,colors.darkTunicBrown],
-        [4,9,colors.pantsDark],[5,9,colors.pantsDark],[6,9,colors.pantsDark],[7,9,colors.pantsDark],[8,9,colors.pantsDark],[9,9,colors.pantsDark],[10,9,colors.pantsDark],
-        [5,10,colors.pantsDark],[6,10,colors.pantsDark],[8,10,colors.pantsDark],[9,10,colors.pantsDark],
-        [5,11,colors.pantsDark],[6,11,colors.pantsDark],[8,11,colors.pantsDark],[9,11,colors.pantsDark],
-    ].forEach(([px, py, color]) => p(px, py, color));
+    // Tris - The Engineer (man with glasses and hooded cloak)
+    const baseSprite = [
+        // Head with hair and hood
+        [5,1,colors.hairBrown],[6,1,colors.hairBrown],[7,1,colors.hairBrown],[8,1,colors.hairBrown],[9,1,colors.hairBrown],[10,1,colors.hairBrown],
+        [4,2,colors.skin],[5,2,colors.glasses],[6,2,colors.skin],[7,2,colors.skin],[8,2,colors.skin],[9,2,colors.glasses],[10,2,colors.skin],
+        [4,3,colors.beardRed],[5,3,colors.beardRed],[6,3,colors.beardRed],[7,3,colors.beardRed],[8,3,colors.beardRed],[9,3,colors.beardRed],[10,3,colors.beardRed],
+        [5,4,colors.darkBeardRed],[6,4,colors.darkBeardRed],[7,4,colors.darkBeardRed],[8,4,colors.darkBeardRed],[9,4,colors.darkBeardRed],
+        [6,5,colors.darkBeardRed],[7,5,colors.darkBeardRed],[8,5,colors.darkBeardRed],[9,5,colors.darkBeardRed],
+        // Body with hooded cloak
+        [3,6,colors.cloakGreen],[4,6,colors.cloakGreen],[5,6,colors.cloakGreen],[6,6,colors.cloakGreen],[7,6,colors.cloakGreen],[8,6,colors.cloakGreen],[9,6,colors.cloakGreen],[10,6,colors.cloakGreen],[11,6,colors.cloakGreen],
+        [2,7,colors.cloakGreen],[3,7,colors.darkCloakGreen],[4,7,colors.darkCloakGreen],[5,7,colors.darkCloakGreen],[6,7,colors.darkCloakGreen],[7,7,colors.darkCloakGreen],[8,7,colors.darkCloakGreen],[9,7,colors.darkCloakGreen],[10,7,colors.darkCloakGreen],[11,7,colors.darkCloakGreen],[12,7,colors.cloakGreen],
+        [2,8,colors.darkCloakGreen],[3,8,colors.darkCloakGreen],[4,8,colors.darkCloakGreen],[5,8,colors.darkCloakGreen],[6,8,colors.darkCloakGreen],[7,8,colors.darkCloakGreen],[8,8,colors.darkCloakGreen],[9,8,colors.darkCloakGreen],[10,8,colors.darkCloakGreen],[11,8,colors.darkCloakGreen],[12,8,colors.darkCloakGreen],
+        [3,9,colors.darkCloakGreen],[4,9,colors.pantsBrown],[5,9,colors.pantsBrown],[6,9,colors.pantsBrown],[7,9,colors.pantsBrown],[8,9,colors.pantsBrown],[9,9,colors.pantsBrown],[10,9,colors.pantsBrown],[11,9,colors.darkCloakGreen],
+        [4,10,colors.pantsBrown],[5,10,colors.pantsBrown],[6,10,colors.pantsBrown],[8,10,colors.pantsBrown],[9,10,colors.pantsBrown],[10,10,colors.pantsBrown],
+        [5,11,colors.pantsBrown],[6,11,colors.pantsBrown],[8,11,colors.pantsBrown],[9,11,colors.pantsBrown],
+    ];
+    
+    baseSprite.forEach(([px, py, color]) => p(px, py, color));
+    
+    // Add glasses details for Tris
+    // Glasses frames
+    p(5, 2, colors.glasses); // Left lens
+    p(9, 2, colors.glasses); // Right lens
+    p(6, 2, colors.glasses); // Bridge
+    p(7, 2, colors.glasses); // Bridge
+    p(8, 2, colors.glasses); // Bridge
+    
+    // Cloak details
+    p(3, 7, colors.darkCloakGreen);
+    p(11, 7, colors.darkCloakGreen);
+    p(4, 8, colors.darkCloakGreen);
+    p(10, 8, colors.darkCloakGreen);
+    
+    // Belt
+    p(4, 9, colors.black);
+    p(5, 9, colors.black);
+    p(6, 9, colors.black);
+    p(7, 9, colors.black);
+    p(8, 9, colors.black);
+    p(9, 9, colors.black);
+    p(10, 9, colors.black);
 
     ctx.restore();
 }
@@ -2123,6 +2296,7 @@ function draw() {
 
     ctx.save();
     ctx.translate(-gameState.camera.x, -gameState.camera.y);
+    // ctx.scale(cameraZoom, cameraZoom); // Disabled zoom
 
     const startX = Math.floor(gameState.camera.x / TILE_SIZE);
     const endX = startX + viewportTileCountX + 2;
@@ -2240,11 +2414,27 @@ function draw() {
     gameState.animals.forEach(animal => {
         const ax = animal.x * TILE_SIZE;
         const ay = animal.y * TILE_SIZE;
-        // Simple circle for animals for now, replace with sprites later
-        ctx.fillStyle = 'red';
-        ctx.beginPath();
-        ctx.arc(ax + TILE_SIZE / 2, ay + TILE_SIZE / 2, TILE_SIZE / 4, 0, Math.PI * 2);
-        ctx.fill();
+        
+        // Draw proper animal sprite based on type
+        if (animal.type === 'bear') {
+            if (spriteImages['bear']) {
+                ctx.drawImage(spriteImages['bear'], ax, ay, TILE_SIZE, TILE_SIZE);
+            } else {
+                drawBearSprite(ax, ay); // Fallback to pixel art
+            }
+        } else if (animal.type === 'wolf') {
+            if (spriteImages['wolf']) {
+                ctx.drawImage(spriteImages['wolf'], ax, ay, TILE_SIZE, TILE_SIZE);
+            } else {
+                drawWolfSprite(ax, ay); // Fallback to pixel art
+            }
+        } else {
+            // Fallback for other animal types
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(ax + TILE_SIZE / 2, ay + TILE_SIZE / 2, TILE_SIZE / 4, 0, Math.PI * 2);
+            ctx.fill();
+        }
         
         if(animal.lastHitTimer > 0) {
             const healthPercentage = animal.hp / animal.maxHp;
@@ -2300,6 +2490,11 @@ function updateUI() {
     document.getElementById('eatBerry').disabled = gameState.inventory.berries <= 0;
     document.getElementById('eatCookedMeat').disabled = gameState.inventory.cookedMeat <= 0;
     document.getElementById('cookMeat').disabled = gameState.inventory.rawMeat <= 0 || !isNearCampfire(gameState.player.x, gameState.player.y);
+    
+    // Update zoom display - Disabled
+    // if (zoomDisplay) {
+    //     zoomDisplay.textContent = `${Math.round(cameraZoom * 100)}%`;
+    // }
 }
 
 
@@ -2463,6 +2658,13 @@ function resizeCanvas() {
 
 document.addEventListener('DOMContentLoaded', function() {
     try {
+        // Load all sprites
+        loadAllSprites().then(() => {
+            console.log('All sprites loaded successfully');
+        }).catch(error => {
+            console.warn('Some sprites failed to load:', error);
+        });
+        
         const startButton = document.getElementById('startButton');
         let selectedCharacter = null;
         document.querySelectorAll('.character-card').forEach((card, index) => {
