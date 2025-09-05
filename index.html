@@ -1,0 +1,2503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three Friends Survival</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Press Start 2P', cursive;
+            background-color: #2c2c2c;
+            color: #e0e0e0;
+            overflow: hidden; /* Prevent scrolling */
+        }
+        canvas {
+            background-color: #3a5941;
+            cursor: crosshair;
+            image-rendering: pixelated; /* Sharp pixels for pixel art */
+            width: 100%;
+            height: 100%;
+        }
+        .ui-panel {
+            background-color: rgba(0, 0, 0, 0.7);
+            border: 2px solid #5a5a5a;
+            border-radius: 8px;
+            padding: 10px;
+        }
+        .stat-bar-bg {
+            background-color: #4a4a4a;
+            border-radius: 9999px;
+            overflow: hidden;
+            border: 1px solid #6a6a6a;
+        }
+        .stat-bar {
+            height: 100%;
+            border-radius: 9999px;
+            transition: width 0.3s ease-in-out;
+        }
+        .craft-button, .tab-button {
+            border: 2px solid #5a5a5a;
+            background-color: #3c3c3c;
+            transition: all 0.2s;
+        }
+        .craft-button:hover:not(:disabled), .tab-button:hover {
+            background-color: #4c4c4c;
+            border-color: #7a7a7a;
+        }
+        .craft-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .tab-button.active {
+            background-color: #6c6c6c;
+            border-color: #9a9a9a;
+        }
+        .message-log {
+            min-height: 80px;
+            overflow-y: auto;
+            font-size: 10px;
+            line-height: 1.4;
+            flex: 1;
+        }
+        .game-over-screen, .intro-screen, .victory-screen {
+            background-color: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(5px);
+        }
+        .hidden-tab {
+            display: none;
+        }
+        
+        /* Gameplay message overlay styling */
+        #gameplayMessages div {
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin-bottom: 2px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(2px);
+            transition: opacity 0.3s ease-out, background-color 0.3s ease-out;
+        }
+        .character-card.selected {
+            box-shadow: 0 0 15px currentColor;
+        }
+    </style>
+</head>
+<body class="bg-black text-white flex flex-col h-screen p-2 md:p-4 gap-2 md:gap-4">
+
+
+    <!-- Main Content -->
+    <main class="flex-grow flex flex-col md:flex-row gap-2 md:gap-4 overflow-hidden">
+        
+        <!-- Left Panel: Other UI -->
+        <aside class="w-full md:w-64 lg:w-80 ui-panel flex flex-col overflow-y-auto order-1 md:order-1 flex-shrink-0">
+            <h1 class="text-xl text-yellow-400 text-center mb-4">Survival</h1>
+            
+            <!-- Quest Log -->
+            <div class="mb-4">
+                <h2 class="text-lg text-yellow-400 mb-2 text-center">OBJECTIVE</h2>
+                <div id="questLog" class="text-xs bg-gray-900 p-2 rounded text-cyan-300">Find your missing friends and light three bonfires to signal for helicopter rescue.</div>
+            </div>
+
+            <!-- Actions Panel -->
+            <div class="mb-4">
+                <h2 class="text-lg text-yellow-400 mb-2 text-center">ACTIONS</h2>
+                <div class="flex mb-2">
+                    <button id="tabCraft" class="tab-button active w-1/2 p-2 rounded-l-md text-xs">Craft</button>
+                    <button id="tabBasic" class="tab-button w-1/2 p-2 rounded-r-md text-xs">Food</button>
+                </div>
+                <!-- Crafting Tab -->
+                <div id="craftingContent">
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <button id="craftAxe" class="craft-button p-2 rounded">Wood Axe (15W)</button>
+                        <button id="craftPickaxe" class="craft-button p-2 rounded">Wood Pick (20W)</button>
+                        <button id="craftSword" class="craft-button p-2 rounded">Sword (25W)</button>
+                        <button id="craftCarvedStone" class="craft-button p-2 rounded">Carved Stone (50S)</button>
+                        <button id="craftCampfire" class="craft-button p-2 rounded">Fire (15W, 5S)</button>
+                        <button id="craftTent" class="craft-button p-2 rounded">Tent (20W, 10S)</button>
+                        <button id="craftFlint" class="craft-button p-2 rounded">Flint (10S)</button>
+                        <button id="craftSteel" class="craft-button p-2 rounded">Steel (5O)</button>
+                    </div>
+                    <div class="text-center text-xs mt-2">Tools: <span id="toolStatus">None</span></div>
+                </div>
+                 <!-- Food Actions Tab -->
+                <div id="basicActionsContent" class="hidden-tab">
+                     <div class="grid grid-cols-2 gap-2 text-xs">
+                         <button id="eatBerry" class="w-full craft-button p-2 rounded">Eat Berry</button>
+                         <button id="eatCookedMeat" class="w-full craft-button p-2 rounded">Eat Meat</button>
+                         <button id="cookMeat" class="w-full craft-button p-2 rounded col-span-2 mt-2">Cook Meat (at fire)</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Backpack Section -->
+            <div class="mb-4">
+                <h2 class="text-lg text-yellow-400 mb-2 text-center">INVENTORY</h2>
+                <button id="backpackButton" class="w-full craft-button p-3 rounded text-sm font-mono">
+                    🎒 Open Backpack
+                </button>
+            </div>
+            
+            <!-- Level Section -->
+            <div class="mb-4">
+                <h2 class="text-lg text-yellow-400 mb-2 text-center">LEVEL</h2>
+                <div class="bg-gray-800 p-3 rounded">
+                    <div class="text-center">
+                        <div class="text-sm text-yellow-400 mb-1">⭐ LEVEL <span id="levelDisplay">1</span></div>
+                        <div class="text-xs text-green-400 mb-2">XP: <span id="xpDisplay">0</span></div>
+                        <div class="stat-bar-bg h-2 w-full"><div id="xpBar" class="stat-bar bg-green-500" style="width: 0%;"></div></div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Right Panel: Game Canvas -->
+        <div class="flex-grow flex items-center justify-center order-2 md:order-2 overflow-hidden relative">
+            <div class="w-full h-full border-4 border-gray-800 rounded-lg shadow-2xl">
+                <canvas id="gameCanvas" tabindex="0"></canvas>
+            </div>
+            
+            <!-- Mini Map Overlay -->
+            <div id="miniMapOverlay" class="absolute top-4 right-4 z-50">
+                <div class="relative">
+                    <canvas id="miniMap" class="block" style="image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;"></canvas>
+                    <div id="miniMapIndicator" class="absolute top-1 left-1 text-red-500 font-bold text-xs bg-black bg-opacity-50 px-1 rounded">(M)</div>
+                </div>
+                <div id="miniMapLegend" class="text-xs text-center mt-2 text-gray-400">
+                    <div class="flex flex-wrap justify-center gap-1">
+                        <span class="inline-block w-2 h-2 bg-purple-500 mr-1"></span>You
+                        <span class="inline-block w-2 h-2 bg-amber-600 mx-1"></span>Rob
+                        <span class="inline-block w-2 h-2 bg-green-600 mx-1"></span>Tris
+                        <span class="inline-block w-2 h-2 bg-red-500 mx-1"></span>Animals
+                        <span class="inline-block w-2 h-2 bg-orange-500 mx-1"></span>Bonfires
+                    </div>
+                </div>
+                <div id="miniMapInstructions" class="text-xs text-center mt-1 text-gray-500">
+                    Press M for fullscreen
+                </div>
+            </div>
+            
+            
+            <!-- Gameplay Message Overlay -->
+            <div id="gameplayMessages" class="absolute bottom-4 left-4 right-4 pointer-events-none">
+                <div id="message1" class="text-white text-sm mb-1 opacity-0 transition-opacity duration-500 font-mono"></div>
+                <div id="message2" class="text-white text-sm mb-1 opacity-0 transition-opacity duration-500 font-mono"></div>
+                <div id="message3" class="text-white text-sm mb-1 opacity-0 transition-opacity duration-500 font-mono"></div>
+                <div id="message4" class="text-white text-sm mb-1 opacity-0 transition-opacity duration-500 font-mono"></div>
+            </div>
+            
+            <!-- Chat History Button -->
+            <div class="absolute bottom-4 left-4 pointer-events-auto">
+                <button id="chatHistoryButton" class="bg-gray-800 hover:bg-gray-700 text-white text-xs px-3 py-1 rounded border border-gray-600 transition-colors duration-200 font-mono">
+                    [Chat History]
+                </button>
+            </div>
+            
+            <!-- Level Up Cards Overlay -->
+            <div id="levelUpOverlay" class="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 hidden">
+                <div class="bg-gray-900 p-6 rounded-lg border border-gray-600 max-w-4xl w-full mx-4">
+                    <h2 class="text-2xl font-bold text-center text-yellow-400 mb-6">🎉 LEVEL UP! Choose Your Enhancement 🎉</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div id="card1" class="level-up-card bg-gray-800 p-4 rounded-lg border border-gray-600 cursor-pointer hover:border-yellow-400 transition-all duration-200">
+                            <div class="text-center">
+                                <div id="card1-icon" class="text-4xl mb-2">💪</div>
+                                <h3 id="card1-title" class="text-lg font-bold text-white mb-2">Strength</h3>
+                                <p id="card1-description" class="text-gray-300 text-sm">+2 Damage</p>
+                            </div>
+                        </div>
+                        <div id="card2" class="level-up-card bg-gray-800 p-4 rounded-lg border border-gray-600 cursor-pointer hover:border-yellow-400 transition-all duration-200">
+                            <div class="text-center">
+                                <div id="card2-icon" class="text-4xl mb-2">❤️</div>
+                                <h3 id="card2-title" class="text-lg font-bold text-white mb-2">Vitality</h3>
+                                <p id="card2-description" class="text-gray-300 text-sm">+20 Max Health</p>
+                            </div>
+                        </div>
+                        <div id="card3" class="level-up-card bg-gray-800 p-4 rounded-lg border border-gray-600 cursor-pointer hover:border-yellow-400 transition-all duration-200">
+                            <div class="text-center">
+                                <div id="card3-icon" class="text-4xl mb-2">⚡</div>
+                                <h3 id="card3-title" class="text-lg font-bold text-white mb-2">Endurance</h3>
+                                <p id="card3-description" class="text-gray-300 text-sm">+20 Max Energy</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Bottom Bar: Full Width Stats & Time -->
+    <footer class="ui-panel flex-shrink-0">
+         <div class="flex flex-col lg:flex-row items-center gap-4">
+            <!-- Full Width Stats -->
+            <div class="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
+                <div class="text-center">
+                    <span class="text-sm">❤️ HEALTH</span>
+                    <div class="stat-bar-bg h-6 w-full"><div id="healthBar" class="stat-bar bg-red-500" style="width: 100%;"></div></div>
+                </div>
+                <div class="text-center">
+                    <span class="text-sm">🍖 HUNGER</span>
+                    <div class="stat-bar-bg h-6 w-full"><div id="hungerBar" class="stat-bar bg-yellow-500" style="width: 100%;"></div></div>
+                </div>
+                <div class="text-center">
+                    <span class="text-sm">⚡ ENERGY</span>
+                    <div class="stat-bar-bg h-6 w-full"><div id="energyBar" class="stat-bar bg-blue-500" style="width: 100%;"></div></div>
+                </div>
+            </div>
+            <!-- Time -->
+            <div class="text-center p-3 bg-gray-900 rounded-md flex-shrink-0">
+                <div id="timeDisplay" class="text-lg text-cyan-300">Day 1 - 07:00</div>
+                <div id="seasonDisplay" class="text-xs text-green-400">Spring</div>
+            </div>
+        </div>
+    </footer>
+    
+    <!-- Character Selection Screen -->
+    <div id="introScreen" class="absolute inset-0 flex flex-col items-center justify-center intro-screen text-center p-8">
+        <div class="max-w-6xl w-full">
+            <h1 class="text-4xl text-yellow-400 mb-6">Three Friends in the Woods</h1>
+            
+            <h2 class="text-2xl text-yellow-400 mb-4">Choose Your Character</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <!-- DAVE - The Seeker -->
+                <div id="character1" class="character-card bg-gray-800 p-4 rounded-lg border border-gray-600 cursor-pointer hover:border-green-400 transition-all duration-200 text-green-400">
+                    <div class="text-center">
+                        <div class="text-5xl mb-3">🌿</div>
+                        <h3 class="text-lg font-bold text-white mb-2">DAVE - The Seeker</h3>
+                        <p class="text-xs text-gray-300 mb-3">With an energetic spirit and a striking red beard, his sharp eyes miss little. He's always been the adventurer of the group.</p>
+                        <div class="text-xs mb-1">
+                            <strong>Perks:</strong> Plant identification, better foraging, finds rare ingredients more often.
+                        </div>
+                        <div class="text-xs text-gray-400">
+                            <strong>Focus:</strong> Survival skills, wilderness knowledge, exploration.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- ROB - The Sentinel -->
+                <div id="character2" class="character-card bg-gray-800 p-4 rounded-lg border border-gray-600 cursor-pointer hover:border-blue-400 transition-all duration-200 text-blue-400">
+                    <div class="text-center">
+                        <div class="text-5xl mb-3">🛡️</div>
+                        <h3 class="text-lg font-bold text-white mb-2">ROB - The Sentinel</h3>
+                        <p class="text-xs text-gray-300 mb-3">Powerfully built with a bushy beard and a surprisingly gentle, though often wide-eyed, demeanor. He is the group's unwavering shield.</p>
+                        <div class="text-xs mb-1">
+                            <strong>Perks:</strong> Enhanced health, stronger in combat, defensive instincts.
+                        </div>
+                        <div class="text-xs text-gray-400">
+                            <strong>Focus:</strong> Combat, defense, protection.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- TRIS - The Architect -->
+                <div id="character3" class="character-card bg-gray-800 p-4 rounded-lg border border-gray-600 cursor-pointer hover:border-yellow-400 transition-all duration-200 text-yellow-400">
+                    <div class="text-center">
+                        <div class="text-5xl mb-3">🔧</div>
+                        <h3 class="text-lg font-bold text-white mb-2">TRIS - The Architect</h3>
+                        <p class="text-xs text-gray-300 mb-3">The calm, inventive mind of the group, with a knowing smile and a well-kept beard. He sees solutions where others see problems.</p>
+                        <div class="text-xs mb-1">
+                            <strong>Perks:</strong> Advanced crafting recipes, uses fewer materials, builds more durable structures.
+                        </div>
+                        <div class="text-xs text-gray-400">
+                            <strong>Focus:</strong> Base building, engineering, traps.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="text-sm text-gray-400 mb-4">
+                <p>Your choice grants you special perks. Your two friends are lost somewhere in the forest waiting for you.</p>
+            </div>
+            
+            <div class="bg-gray-900 p-6 rounded-lg border border-gray-600 mb-8">
+                <p class="text-base text-gray-300">Lost and separated in the woods, you must find your friends and light three <span class="text-yellow-400">bonfires</span> to signal for rescue before the wilderness claims you.</p>
+            </div>
+            
+            <button id="startButton" class="craft-button text-xl py-3 px-6 rounded hidden">Begin Your Journey</button>
+        </div>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="gameOverScreen" class="hidden absolute inset-0 flex-col items-center justify-center game-over-screen">
+        <h1 class="text-6xl text-red-600 mb-4">GAME OVER</h1>
+        <p id="gameOverReason" class="text-xl text-white mb-8">You have perished.</p>
+        <button onclick="window.location.reload()" class="craft-button text-2xl py-4 px-8 rounded">Retry</button>
+    </div>
+
+    <!-- Victory Screen -->
+    <div id="victoryScreen" class="hidden absolute inset-0 flex-col items-center justify-center victory-screen text-center">
+        <h1 class="text-6xl text-green-500 mb-4">VICTORY!</h1>
+        <p class="text-xl text-white mb-8">The three bonfires burn bright, sending smoke signals high into the sky. The sound of helicopter blades echoes through the forest as your rescue arrives. You and your friends climb aboard, returning to your ordinary lives, forever changed by the extraordinary adventure.</p>
+        <button onclick="window.location.reload()" class="craft-button text-2xl py-4 px-8 rounded">Play Again</button>
+    </div>
+
+    <!-- Chat History Modal -->
+    <div id="chatHistoryModal" class="hidden absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+        <div class="bg-gray-900 p-6 rounded-lg border border-gray-600 max-w-4xl w-full mx-4 max-h-96 flex flex-col">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-yellow-400">Chat History</h2>
+                <button id="closeChatHistory" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+            </div>
+            <div id="chatHistoryContent" class="flex-grow overflow-y-auto bg-gray-800 p-4 rounded border border-gray-600 font-mono text-sm text-gray-300">
+                <!-- Chat messages will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Backpack Modal -->
+    <div id="backpackModal" class="hidden absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+        <div class="bg-gray-900 p-6 rounded-lg border border-gray-600 max-w-4xl w-full mx-4 max-h-96 flex flex-col">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-yellow-400">🎒 Backpack</h2>
+                <button id="closeBackpack" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+            </div>
+            <div id="backpackContent" class="flex-grow overflow-y-auto bg-gray-800 p-4 rounded border border-gray-600">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                    <!-- Inventory items will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const miniMap = document.getElementById('miniMap');
+
+// Polyfill for roundRect if not available
+if (!ctx.roundRect) {
+    ctx.roundRect = function(x, y, width, height, radius) {
+        this.beginPath();
+        this.moveTo(x + radius, y);
+        this.lineTo(x + width - radius, y);
+        this.quadraticCurveTo(x + width, y, x + width, y + radius);
+        this.lineTo(x + width, y + height - radius);
+        this.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+        this.lineTo(x + radius, y + height);
+        this.quadraticCurveTo(x, y + height, x, y + height - radius);
+        this.lineTo(x, y + radius);
+        this.quadraticCurveTo(x, y, x + radius, y);
+        this.closePath();
+    };
+}
+
+// UI Elements
+const healthBar = document.getElementById('healthBar');
+const hungerBar = document.getElementById('hungerBar');
+const energyBar = document.getElementById('energyBar');
+const xpBar = document.getElementById('xpBar');
+const xpDisplay = document.getElementById('xpDisplay');
+const levelDisplay = document.getElementById('levelDisplay');
+const timeDisplay = document.getElementById('timeDisplay');
+const toolStatusUI = document.getElementById('toolStatus');
+const questLog = document.getElementById('questLog');
+const introScreen = document.getElementById('introScreen');
+const gameOverScreen = document.getElementById('gameOverScreen');
+const gameOverReason = document.getElementById('gameOverReason');
+const victoryScreen = document.getElementById('victoryScreen');
+
+// Gameplay message overlay elements
+const gameplayMessage1 = document.getElementById('message1');
+const gameplayMessage2 = document.getElementById('message2');
+const gameplayMessage3 = document.getElementById('message3');
+const gameplayMessage4 = document.getElementById('message4');
+
+// --- Game Configuration ---
+const TILE_SIZE = 64;
+const MAP_SIZE = 110; // Increased map size for a larger world
+let viewportTileCountX = 11;
+let viewportTileCountY = 11;
+
+const TILES = {
+    GRASS: 0,
+    TREE: 1,
+    ROCK: 2,
+    BERRY_BUSH: 3,
+    WATER: 4,
+    CAMPFIRE: 5,
+    TENT: 6,
+    STUMP: 7,
+    MINED_ROCK: 8,
+    EMPTY_BUSH: 9,
+    MOONPETAL_FLOWER: 10,
+    BONFIRE: 11,
+    BONFIRE_LIT: 12,
+    MOUNTAIN: 13,
+    ROB: 15, // Friend 1
+    TRIS: 16, // Friend 2
+    RABBIT: 17,
+    DEER: 18,
+    SQUIRREL: 19,
+};
+
+const TILE_COLORS = {
+    [TILES.GRASS]: '#5a8b41',
+    [TILES.WATER]: '#4a90e2',
+    [TILES.TREE]: '#3a5941',
+    [TILES.ROCK]: '#8d8d8d',
+    [TILES.BERRY_BUSH]: '#c56183',
+    [TILES.CAMPFIRE]: '#ff8c00',
+    [TILES.TENT]: '#a0522d',
+    [TILES.STUMP]: '#6b4f3a',
+    [TILES.MINED_ROCK]: '#6a6a6a',
+    [TILES.EMPTY_BUSH]: '#71845a',
+    [TILES.MOONPETAL_FLOWER]: '#a188d9',
+    [TILES.BONFIRE]: '#8b4513',
+    [TILES.BONFIRE_LIT]: '#ff4500',
+    [TILES.MOUNTAIN]: '#6b7280',
+    [TILES.ROB]: '#654321', // Placeholder color
+    [TILES.TRIS]: '#8b4513', // Placeholder color
+    [TILES.RABBIT]: '#d4a574',
+    [TILES.DEER]: '#8b4513',
+    [TILES.SQUIRREL]: '#a0522d',
+};
+
+
+// --- Game State ---
+let gameState = {
+    paused: true,
+    player: {
+        x: Math.floor(MAP_SIZE / 2),
+        y: Math.floor(MAP_SIZE / 2),
+        health: 100,
+        hunger: 100,
+        energy: 100,
+        direction: 'down',
+        isMoving: false,
+        moveCooldown: 0,
+    },
+    camera: {
+        x: 0,
+        y: 0,
+    },
+    inventory: {
+        wood: 0,
+        stone: 0,
+        berries: 0,
+        rawMeat: 0,
+        cookedMeat: 0,
+        gems: 0,
+        petals: 0,
+        carvedStone: 0,
+        // Loot items
+        fur: 0,
+        bone: 0,
+        herbs: 0,
+        claw: 0,
+        fang: 0,
+        leather: 0,
+        ore: 0,
+        potion: 0,
+        hide: 0,
+        elixir: 0,
+        crystal: 0,
+        flint: 0,
+        steel: 0,
+    },
+    xp: 0,
+    level: 1,
+    tools: {
+        axe: false,
+        pickaxe: false,
+        sword: false,
+    },
+    quest: {
+        friendsFound: 0,
+        bonfiresLit: 0,
+        totalBonfires: 3,
+    },
+    world: [],
+    animals: [],
+    rob: { // Friend 1, The Sentinel
+        x: 0,
+        y: 0,
+        direction: 'down',
+        isMoving: false,
+        walkCycle: 0,
+        lastInteraction: 0,
+        following: false,
+        wandering: { isWandering: true, pauseTimer: 0, targetX: 0, targetY: 0, moveCooldown: 0 },
+        speechBubble: { visible: false, message: '', timer: 0, maxTimer: 180 },
+        calloutMessages: [ "Over here!", "Glad I found you!", "We need to stick together!", "Watch out for wolves!" ],
+        adviceMessages: [ "Lighting those bonfires is our only shot.", "A sword would be useful against the wildlife.", "Stay strong. We'll get out of this." ],
+        itemOffers: [ { item: 'stone', amount: 5, message: "Here, take these stones. For protection." }, { item: 'rawMeat', amount: 2, message: "Found this. Stay fed." } ]
+    },
+    tris: { // Friend 2, The Architect
+        x: 0,
+        y: 0,
+        direction: 'down',
+        isMoving: false,
+        walkCycle: 0,
+        lastInteraction: 0,
+        following: false,
+        wandering: { isWandering: true, pauseTimer: 0, targetX: 0, targetY: 0, moveCooldown: 0 },
+        speechBubble: { visible: false, message: '', timer: 0, maxTimer: 180 },
+        calloutMessages: [ "Is that you?", "Thank goodness!", "I had an idea...", "Let's get to work." ],
+        adviceMessages: [ "With enough wood and stone, we can build anything.", "A campfire will keep the beasts away at night.", "We need better tools to be efficient." ],
+        itemOffers: [ { item: 'wood', amount: 10, message: "I gathered some wood. Let's build something." }, { item: 'herbs', amount: 2, message: "These herbs might be useful." } ]
+    },
+    newAnimals: {
+        rabbits: [],
+        deer: [],
+        squirrels: [],
+    },
+    time: {
+        day: 1,
+        hour: 7,
+        minute: 0,
+        animalSpawnTimer: 200,
+    },
+    playerAnimation: {
+        walkCycle: 0,
+        toolSwing: 0, 
+    },
+    isNight: false,
+    isGameOver: false,
+    placedObjects: {}, 
+    worldObjects: {}, 
+    activeAnimations: [],
+    gameplayMessages: [],
+    miniMapFullscreen: false,
+    levelUpCards: {
+        visible: false,
+        cards: [],
+    },
+    playerModifiers: {
+        healthBonus: 0,
+        energyBonus: 0,
+        strengthBonus: 0,
+    },
+    // Loot system
+    lootItems: {
+        common: [ { name: 'Small Fur', type: 'fur', amount: 1, description: 'Soft animal fur' }, { name: 'Bone Fragment', type: 'bone', amount: 1, description: 'Small bone piece' }, { name: 'Wild Herbs', type: 'herbs', amount: 2, description: 'Medicinal herbs' }, { name: 'Sharp Claw', type: 'claw', amount: 1, description: 'Sharp animal claw' } ],
+        uncommon: [ { name: 'Wolf Fur', type: 'fur', amount: 2, description: 'Thick wolf fur' }, { name: 'Wolf Fang', type: 'fang', amount: 1, description: 'Sharp wolf fang' }, { name: 'Leather Strip', type: 'leather', amount: 1, description: 'Tough leather' }, { name: 'Iron Ore', type: 'ore', amount: 1, description: 'Raw iron ore' }, { name: 'Healing Potion', type: 'potion', amount: 1, description: 'Restores health' } ],
+        rare: [ { name: 'Bear Hide', type: 'hide', amount: 1, description: 'Thick bear hide' }, { name: 'Bear Claw', type: 'claw', amount: 2, description: 'Massive bear claw' }, { name: 'Ancient Gem', type: 'gem', amount: 1, description: 'Mystical gem' }, { name: 'Iron Sword', type: 'weapon', amount: 1, description: 'Sharp iron blade' }, { name: 'Health Elixir', type: 'elixir', amount: 1, description: 'Powerful healing' }, { name: 'Crystal', type: 'crystal', amount: 1, description: 'Glowing crystal' } ]
+    },
+};
+
+// --- Game Logic ---
+
+function logMessage(message, color = '#e0e0e0') {
+    // Add to gameplay messages
+    const timestamp = Date.now();
+    gameState.gameplayMessages.push({ message, color, timestamp });
+    
+    // Keep only the last 50 messages for chat history
+    if (gameState.gameplayMessages.length > 50) {
+        gameState.gameplayMessages.shift();
+    }
+    
+    updateGameplayMessages();
+}
+
+function checkLevelUp() {
+    const xpNeeded = gameState.level * 25; // 25 XP per level
+    if (gameState.xp >= xpNeeded) {
+        gameState.level++;
+        gameState.xp -= xpNeeded;
+        showLevelUpCards();
+        updateUI();
+    }
+}
+
+function showLevelUpCards() {
+    gameState.levelUpCards.visible = true;
+    gameState.paused = true; // Pause the game during card selection
+    
+    // Generate three random cards
+    const cardTypes = [
+        { type: 'strength', icon: '💪', title: 'Strength', description: '+2 Damage', bonus: 2 },
+        { type: 'vitality', icon: '❤️', title: 'Vitality', description: '+20 Max Health', bonus: 20 },
+        { type: 'endurance', icon: '⚡', title: 'Endurance', description: '+20 Max Energy', bonus: 20 },
+    ];
+    
+    // Shuffle and pick 3 cards
+    const shuffled = cardTypes.sort(() => Math.random() - 0.5);
+    gameState.levelUpCards.cards = shuffled.slice(0, 3);
+    
+    // Update card display
+    for (let i = 0; i < 3; i++) {
+        const card = gameState.levelUpCards.cards[i];
+        document.getElementById(`card${i+1}-icon`).textContent = card.icon;
+        document.getElementById(`card${i+1}-title`).textContent = card.title;
+        document.getElementById(`card${i+1}-description`).textContent = card.description;
+    }
+    
+    // Show overlay
+    document.getElementById('levelUpOverlay').classList.remove('hidden');
+}
+
+function selectLevelUpCard(cardIndex) {
+    const selectedCard = gameState.levelUpCards.cards[cardIndex];
+    
+    // Apply the bonus
+    switch (selectedCard.type) {
+        case 'strength':
+            gameState.playerModifiers.strengthBonus += selectedCard.bonus;
+            logMessage(`You chose Strength! +${selectedCard.bonus} damage bonus.`, '#fbbf24');
+            break;
+        case 'vitality':
+            gameState.playerModifiers.healthBonus += selectedCard.bonus;
+            gameState.player.health += selectedCard.bonus; // Also heal the player
+            logMessage(`You chose Vitality! +${selectedCard.bonus} max health.`, '#fbbf24');
+            break;
+        case 'endurance':
+            gameState.playerModifiers.energyBonus += selectedCard.bonus;
+            gameState.player.energy += selectedCard.bonus; // Also restore energy
+            logMessage(`You chose Endurance! +${selectedCard.bonus} max energy.`, '#fbbf24');
+            break;
+    }
+    
+    // Hide overlay and resume game
+    document.getElementById('levelUpOverlay').classList.add('hidden');
+    gameState.levelUpCards.visible = false;
+    gameState.paused = false;
+    
+    logMessage(`🎉 You are now level ${gameState.level}!`, '#fbbf24');
+    updateUI();
+}
+
+function checkFriendCallout(friend) {
+    if (friend.x <= 0 || friend.y <= 0) return;
+    
+    const distToPlayer = Math.sqrt(
+        Math.pow(gameState.player.x - friend.x, 2) + 
+        Math.pow(gameState.player.y - friend.y, 2)
+    );
+    
+    if (distToPlayer <= 6 && !friend.speechBubble.visible) {
+        if (Math.random() < 0.003) {
+            friend.speechBubble.visible = true;
+            friend.speechBubble.message = friend.calloutMessages[
+                Math.floor(Math.random() * friend.calloutMessages.length)
+            ];
+            friend.speechBubble.timer = friend.speechBubble.maxTimer;
+        }
+    }
+    
+    if (friend.speechBubble.visible) {
+        friend.speechBubble.timer--;
+        if (friend.speechBubble.timer <= 0) {
+            friend.speechBubble.visible = false;
+        }
+    }
+}
+
+
+function isPositionOccupied(x, y, excludeEntity = null) {
+    if (gameState.player.x === x && gameState.player.y === y) return true;
+    if (excludeEntity !== gameState.rob && gameState.rob.x === x && gameState.rob.y === y) return true;
+    if (excludeEntity !== gameState.tris && gameState.tris.x === x && gameState.tris.y === y) return true;
+    return gameState.animals.some(animal => animal.x === x && animal.y === y);
+}
+
+function updateNPCWandering() {
+    // Update Rob (Friend 1)
+    if (gameState.rob.following) {
+        updateNPCFollowing(gameState.rob);
+        checkNPCHelpWithBonfires(gameState.rob, 'Rob');
+    } else {
+        updateNPCWanderingFor(gameState.rob);
+    }
+    
+    // Update Tris (Friend 2)
+    if (gameState.tris.following) {
+        updateNPCFollowing(gameState.tris);
+        checkNPCHelpWithBonfires(gameState.tris, 'Tris');
+    } else {
+        updateNPCWanderingFor(gameState.tris);
+    }
+}
+
+function checkNPCHelpWithBonfires(npc, npcName) {
+    if (!npc.lastBonfireHelp) npc.lastBonfireHelp = 0;
+    const now = Date.now();
+    if (now - npc.lastBonfireHelp < 2000) return; // 2 second cooldown
+    
+    for (let y = 0; y < MAP_SIZE; y++) {
+        for (let x = 0; x < MAP_SIZE; x++) {
+            if (gameState.world[y][x] === TILES.BONFIRE) {
+                const distToBonfire = Math.sqrt(
+                    Math.pow(npc.x - x, 2) + Math.pow(npc.y - y, 2)
+                );
+                
+                if (distToBonfire <= 2) {
+                    const bonfireKey = `${x},${y}`;
+                    if (gameState.worldObjects[bonfireKey] && gameState.inventory.flint > 0 && gameState.inventory.steel > 0) {
+                        gameState.inventory.flint -= 1;
+                        gameState.inventory.steel -= 1;
+                        gameState.world[y][x] = TILES.BONFIRE_LIT;
+                        delete gameState.worldObjects[bonfireKey];
+                        gameState.quest.bonfiresLit++;
+                        npc.lastBonfireHelp = now;
+                        
+                        logMessage(`${npcName} helps light the bonfire! The flames roar to life!`, '#ff4500');
+                        updateQuestLog();
+                        
+                        if (gameState.quest.bonfiresLit >= gameState.quest.totalBonfires) {
+                            victoryScreen.classList.remove('hidden');
+                            victoryScreen.classList.add('flex');
+                            gameState.paused = true;
+                        }
+                        return;
+                    }
+                }
+            }
+        }
+    }
+}
+
+function updateNPCFollowing(npc) {
+    if (!npc.following || npc.x <= 0 || npc.y <= 0) return;
+    
+    const distToPlayer = Math.sqrt(
+        Math.pow(gameState.player.x - npc.x, 2) + 
+        Math.pow(gameState.player.y - npc.y, 2)
+    );
+    
+    if (distToPlayer > 3) {
+        const dx = gameState.player.x - npc.x;
+        const dy = gameState.player.y - npc.y;
+        
+        let moveX = 0, moveY = 0;
+        if (Math.abs(dx) > Math.abs(dy)) {
+            moveX = dx > 0 ? 1 : -1;
+        } else {
+            moveY = dy > 0 ? 1 : -1;
+        }
+        
+        const newX = npc.x + moveX;
+        const newY = npc.y + moveY;
+        
+        if (newX >= 0 && newX < MAP_SIZE && newY >= 0 && newY < MAP_SIZE) {
+            const targetTile = gameState.world[newY][newX];
+            
+            if (targetTile !== TILES.TREE && targetTile !== TILES.ROCK && targetTile !== TILES.WATER && 
+                targetTile !== TILES.BONFIRE && targetTile !== TILES.BONFIRE_LIT && targetTile !== TILES.MOUNTAIN &&
+                !isPositionOccupied(newX, newY, npc)) {
+                
+                npc.x = newX;
+                npc.y = newY;
+                npc.isMoving = true;
+                
+                if (moveX > 0) npc.direction = 'right';
+                else if (moveX < 0) npc.direction = 'left';
+                else if (moveY > 0) npc.direction = 'down';
+                else if (moveY < 0) npc.direction = 'up';
+            }
+        }
+    } else {
+        npc.isMoving = false;
+    }
+}
+
+function updateNPCWanderingFor(npc) {
+    if (!npc.wandering.isWandering || npc.x <= 0 || npc.y <= 0) return;
+    
+    const { wandering } = npc;
+    
+    if (wandering.pauseTimer > 0) {
+        wandering.pauseTimer--;
+        npc.isMoving = false;
+        return;
+    }
+    
+    if (wandering.moveCooldown > 0) {
+        wandering.moveCooldown--;
+        return;
+    }
+    
+    const atTarget = (npc.x === wandering.targetX && npc.y === wandering.targetY);
+    const needsNewTarget = (wandering.targetX === 0 && wandering.targetY === 0) || atTarget;
+    
+    if (needsNewTarget) {
+        const maxAttempts = 20;
+        let attempts = 0;
+        
+        while (attempts < maxAttempts) {
+            const targetX = Math.floor(Math.random() * MAP_SIZE);
+            const targetY = Math.floor(Math.random() * MAP_SIZE);
+            
+            if (targetX >= 0 && targetX < MAP_SIZE && targetY >= 0 && targetY < MAP_SIZE) {
+                const targetTile = gameState.world[targetY][targetX];
+                const distToPlayer = Math.sqrt(Math.pow(targetX - gameState.player.x, 2) + Math.pow(targetY - gameState.player.y, 2));
+                
+                if (targetTile === TILES.GRASS && distToPlayer > 3 && !isPositionOccupied(targetX, targetY)) {
+                    wandering.targetX = targetX;
+                    wandering.targetY = targetY;
+                    break;
+                }
+            }
+            attempts++;
+        }
+        
+        if (attempts >= maxAttempts) {
+            wandering.pauseTimer = 60 + Math.floor(Math.random() * 120);
+            return;
+        }
+    }
+    
+    const dx = wandering.targetX - npc.x;
+    const dy = wandering.targetY - npc.y;
+    
+    if (dx !== 0 || dy !== 0) {
+        let moveX = 0;
+        let moveY = 0;
+        
+        if (Math.abs(dx) > Math.abs(dy)) {
+            moveX = dx > 0 ? 1 : -1;
+        } else {
+            moveY = dy > 0 ? 1 : -1;
+        }
+        
+        const newX = npc.x + moveX;
+        const newY = npc.y + moveY;
+        
+        if (newX >= 0 && newX < MAP_SIZE && newY >= 0 && newY < MAP_SIZE) {
+            const targetTile = gameState.world[newY][newX];
+            const distToPlayer = Math.sqrt(Math.pow(newX - gameState.player.x, 2) + Math.pow(newY - gameState.player.y, 2));
+            
+            if (targetTile === TILES.GRASS && distToPlayer > 2 && !isPositionOccupied(newX, newY)) {
+                npc.x = newX;
+                npc.y = newY;
+                npc.isMoving = true;
+                
+                if (moveX > 0) npc.direction = 'right';
+                else if (moveX < 0) npc.direction = 'left';
+                else if (moveY > 0) npc.direction = 'down';
+                else if (moveY < 0) npc.direction = 'up';
+                
+                wandering.moveCooldown = 15 + Math.floor(Math.random() * 10);
+            }
+        }
+    }
+    
+    if (npc.x === wandering.targetX && npc.y === wandering.targetY) {
+        wandering.pauseTimer = 180 + Math.floor(Math.random() * 300);
+        npc.isMoving = false;
+    }
+}
+
+function updateGameplayMessages() {
+    const messages = gameState.gameplayMessages;
+    const now = Date.now();
+    
+    const recentMessages = messages.slice(-4);
+    const messageElements = [gameplayMessage1, gameplayMessage2, gameplayMessage3, gameplayMessage4];
+    
+    messageElements.forEach((element, index) => {
+        if (index < recentMessages.length) {
+            const msg = recentMessages[recentMessages.length - 1 - index];
+            const age = now - msg.timestamp;
+            
+            element.textContent = msg.message;
+            element.style.color = msg.color;
+            
+            let opacity = 1.0;
+            if (index === 0) opacity = Math.max(0.1, 1.0 - (age / 3000));
+            else if (index === 1) opacity = Math.max(0.3, 1.0 - (age / 5000));
+            else if (index === 2) opacity = Math.max(0.6, 1.0 - (age / 7000));
+            
+            element.style.opacity = opacity;
+            element.style.backgroundColor = `rgba(0, 0, 0, ${0.7 * opacity})`;
+        } else {
+            element.style.opacity = 0;
+            element.style.backgroundColor = 'rgba(0, 0, 0, 0)';
+        }
+    });
+}
+
+function updateBackpack() {
+    const backpackContent = document.getElementById('backpackContent');
+    if (!backpackContent) return;
+    
+    backpackContent.innerHTML = '';
+    
+    const inventoryItems = [
+        { key: 'wood', name: 'Wood', icon: '🌲', count: gameState.inventory.wood },
+        { key: 'stone', name: 'Stone', icon: '⛏️', count: gameState.inventory.stone },
+        { key: 'berries', name: 'Berries', icon: '🍓', count: gameState.inventory.berries },
+        { key: 'rawMeat', name: 'Raw Meat', icon: '🥩', count: gameState.inventory.rawMeat },
+        { key: 'gem', name: 'Gem', icon: '💎', count: gameState.inventory.gem },
+        { key: 'petal', name: 'Petal', icon: '🌸', count: gameState.inventory.petal },
+        { key: 'cookedMeat', name: 'Cooked Meat', icon: '🔥', count: gameState.inventory.cookedMeat },
+        { key: 'carvedStone', name: 'Carved Stone', icon: '🗿', count: gameState.inventory.carvedStone },
+        { key: 'fur', name: 'Fur', icon: '🦌', count: gameState.inventory.fur },
+        { key: 'bone', name: 'Bone', icon: '🦴', count: gameState.inventory.bone },
+        { key: 'herbs', name: 'Herbs', icon: '🌿', count: gameState.inventory.herbs },
+        { key: 'claw', name: 'Claw', icon: '🐾', count: gameState.inventory.claw },
+        { key: 'fang', name: 'Fang', icon: '🦷', count: gameState.inventory.fang },
+        { key: 'leather', name: 'Leather', icon: '🧵', count: gameState.inventory.leather },
+        { key: 'ore', name: 'Ore', icon: '⚡', count: gameState.inventory.ore },
+        { key: 'potion', name: 'Potion', icon: '🧪', count: gameState.inventory.potion },
+        { key: 'hide', name: 'Hide', icon: '🐻', count: gameState.inventory.hide },
+        { key: 'elixir', name: 'Elixir', icon: '💊', count: gameState.inventory.elixir },
+        { key: 'crystal', name: 'Crystal', icon: '💎', count: gameState.inventory.crystal },
+        { key: 'flint', name: 'Flint', icon: '⚡', count: gameState.inventory.flint },
+        { key: 'steel', name: 'Steel', icon: '⚒️', count: gameState.inventory.steel }
+    ];
+    
+    const availableItems = inventoryItems.filter(item => item.count > 0);
+    
+    if (availableItems.length === 0) {
+        backpackContent.innerHTML = '<div class="col-span-full text-center text-gray-400 py-8">Your backpack is empty</div>';
+        return;
+    }
+    
+    const grid = document.createElement('div');
+    grid.className = 'grid grid-cols-2 md:grid-cols-4 gap-3 text-sm';
+    
+    availableItems.forEach(item => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'bg-gray-700 p-3 rounded border border-gray-600 text-center';
+        itemDiv.innerHTML = `
+            <div class="text-lg mb-1">${item.icon}</div>
+            <div class="text-xs text-gray-300">${item.name}</div>
+            <div class="text-xs text-yellow-400 font-bold">${item.count}</div>
+        `;
+        grid.appendChild(itemDiv);
+    });
+    
+    backpackContent.appendChild(grid);
+}
+
+function updateQuestLog() {
+    const friendsFound = gameState.quest.friendsFound || 0;
+    const bonfiresLit = gameState.quest.bonfiresLit || 0;
+    const totalBonfires = 3;
+    
+    if (friendsFound < 2) {
+        questLog.textContent = `Find your missing friends (${friendsFound}/2) and light bonfires (${bonfiresLit}/${totalBonfires}) for rescue.`;
+    } else if (bonfiresLit < totalBonfires) {
+        questLog.textContent = `All friends found! Light the bonfires (${bonfiresLit}/${totalBonfires}) to signal for helicopter rescue.`;
+    } else {
+        questLog.textContent = "All bonfires lit! The helicopter is coming to rescue you!";
+    }
+}
+
+function generateWorld() {
+    gameState.world = Array(MAP_SIZE).fill(null).map(() => Array(MAP_SIZE).fill(TILES.MOUNTAIN));
+    gameState.worldObjects = {};
+
+    let walker = { x: Math.floor(MAP_SIZE / 2), y: Math.floor(MAP_SIZE / 2) };
+    const landTilesToGenerate = Math.floor(MAP_SIZE * MAP_SIZE * 0.75);
+    let landGenerated = 0;
+
+    while(landGenerated < landTilesToGenerate) {
+        if (gameState.world[walker.y][walker.x] === TILES.MOUNTAIN) {
+            gameState.world[walker.y][walker.x] = TILES.GRASS;
+            landGenerated++;
+        }
+        const dir = Math.floor(Math.random() * 4);
+        switch(dir) {
+            case 0: walker.y--; break;
+            case 1: walker.y++; break;
+            case 2: walker.x--; break;
+            case 3: walker.x++; break;
+        }
+        walker.x = Math.max(1, Math.min(MAP_SIZE - 2, walker.x));
+        walker.y = Math.max(1, Math.min(MAP_SIZE - 2, walker.y));
+    }
+    
+    let grassTiles = [];
+    for (let y = 0; y < MAP_SIZE; y++) {
+        for (let x = 0; x < MAP_SIZE; x++) {
+            if (gameState.world[y][x] === TILES.GRASS) {
+                grassTiles.push({x, y});
+            }
+        }
+    }
+
+    grassTiles.sort(() => 0.5 - Math.random());
+
+    const numTrees = Math.floor(grassTiles.length * 0.2);
+    const numRocks = Math.floor(grassTiles.length * 0.08);
+    const numBushes = Math.floor(grassTiles.length * 0.04);
+
+    for(let i = 0; i < grassTiles.length; i++) {
+        const tile = grassTiles[i];
+        const key = `${tile.x},${tile.y}`;
+        const distToPlayer = Math.sqrt(Math.pow(tile.x - gameState.player.x, 2) + Math.pow(tile.y - gameState.player.y, 2));
+        
+        if (distToPlayer <= 2) continue;
+
+        if (i < numTrees) {
+             gameState.world[tile.y][tile.x] = TILES.TREE;
+             gameState.worldObjects[key] = { type: TILES.TREE, health: 10 };
+        } else if (i < numTrees + numRocks) {
+            gameState.world[tile.y][tile.x] = TILES.ROCK;
+            gameState.worldObjects[key] = { type: TILES.ROCK, health: 15 };
+        } else if (i < numTrees + numRocks + numBushes) {
+             gameState.world[tile.y][tile.x] = TILES.BERRY_BUSH;
+        }
+    }
+    
+    let bonfiresPlaced = 0;
+    for(let i = 0; i < grassTiles.length && bonfiresPlaced < gameState.quest.totalBonfires; i++) {
+        const tile = grassTiles[i];
+         const distToPlayer = Math.sqrt(Math.pow(tile.x - gameState.player.x, 2) + Math.pow(tile.y - gameState.player.y, 2));
+        if(distToPlayer > 12) {
+            gameState.world[tile.y][tile.x] = TILES.BONFIRE;
+            gameState.worldObjects[`${tile.x},${tile.y}`] = { type: TILES.BONFIRE, requires: 'flintAndSteel', amount: 1 };
+            bonfiresPlaced++;
+        }
+    }
+    
+    // Place Rob NPC
+    let robPlaced = false;
+    for(let i = 0; i < grassTiles.length && !robPlaced; i++) {
+        const tile = grassTiles[i];
+        const distToPlayer = Math.sqrt(Math.pow(tile.x - gameState.player.x, 2) + Math.pow(tile.y - gameState.player.y, 2));
+        if(distToPlayer > 10 && distToPlayer < 20) {
+            gameState.world[tile.y][tile.x] = TILES.ROB;
+            gameState.rob.x = tile.x;
+            gameState.rob.y = tile.y;
+            robPlaced = true;
+            logMessage("You hear a familiar, booming voice nearby...", "#8b4513");
+        }
+    }
+    
+    // Place Tris NPC
+    let trisPlaced = false;
+    for(let i = 0; i < grassTiles.length && !trisPlaced; i++) {
+        const tile = grassTiles[i];
+        const distToPlayer = Math.sqrt(Math.pow(tile.x - gameState.player.x, 2) + Math.pow(tile.y - gameState.player.y, 2));
+        const distToRob = Math.sqrt(Math.pow(tile.x - gameState.rob.x, 2) + Math.pow(tile.y - gameState.rob.y, 2));
+        if(distToPlayer > 12 && distToPlayer < 25 && distToRob > 5) {
+            gameState.world[tile.y][tile.x] = TILES.TRIS;
+            gameState.tris.x = tile.x;
+            gameState.tris.y = tile.y;
+            trisPlaced = true;
+            logMessage("Another voice, calm and steady, echoes through the forest...", "#228b22");
+        }
+    }
+    
+    let playerSpawned = false;
+    let attempts = 0;
+    while (!playerSpawned && attempts < 100) {
+        if (gameState.world[gameState.player.y][gameState.player.x] === TILES.GRASS) {
+            playerSpawned = true;
+        } else {
+            const searchRadius = Math.floor(attempts / 10) + 1;
+            for (let dy = -searchRadius; dy <= searchRadius && !playerSpawned; dy++) {
+                for (let dx = -searchRadius; dx <= searchRadius && !playerSpawned; dx++) {
+                    const newX = gameState.player.x + dx;
+                    const newY = gameState.player.y + dy;
+                    if (newX >= 0 && newX < MAP_SIZE && newY >= 0 && newY < MAP_SIZE && gameState.world[newY][newX] === TILES.GRASS) {
+                        gameState.player.x = newX;
+                        gameState.player.y = newY;
+                        playerSpawned = true;
+                    }
+                }
+            }
+        }
+        attempts++;
+    }
+    if (!playerSpawned) {
+        gameState.world[gameState.player.y][gameState.player.x] = TILES.GRASS;
+    }
+}
+
+function getTileInFront() {
+    let { x, y, direction } = gameState.player;
+    if (direction.includes('up')) y--;
+    if (direction.includes('down')) y++;
+    if (direction.includes('left')) x--;
+    if (direction.includes('right')) x++;
+    return { x, y };
+}
+
+function interact() {
+    const target = getTileInFront();
+    if (target.x < 0 || target.x >= MAP_SIZE || target.y < 0 || target.y >= MAP_SIZE) return;
+
+    const animal = gameState.animals.find(a => a.x === target.x && a.y === target.y);
+    if (animal) {
+        const baseDamage = gameState.tools.sword ? 5 : 2;
+        const damage = baseDamage + gameState.playerModifiers.strengthBonus;
+        animal.hp -= damage;
+        animal.lastHitTimer = 30;
+        logMessage(`You hit the ${animal.type} for ${damage} damage!`, '#e06c75');
+        
+        if (animal.hp <= 0) {
+            let meatReward, xpReward;
+            if (animal.type === 'squirrel') { meatReward = 1; xpReward = 3; } 
+            else if (animal.type === 'rabbit') { meatReward = 1; xpReward = 2; } 
+            else if (animal.type === 'bear') { meatReward = 5; xpReward = 10; } 
+            else { meatReward = 2; xpReward = 5; } // Wolf
+            
+            logMessage(`You defeated the ${animal.type}! +${meatReward} Raw Meat, +${xpReward} XP.`, '#98c379');
+            gameState.inventory.rawMeat += meatReward;
+            gameState.xp += xpReward;
+            
+            dropLoot(animal.type);
+            gameState.animals = gameState.animals.filter(a => a !== animal);
+            checkLevelUp();
+        }
+        gameState.playerAnimation.toolSwing = 15;
+        return;
+    }
+
+    const tile = gameState.world[target.y][target.x];
+    const targetKey = `${target.x},${target.y}`;
+    let interactionDidDamage = false;
+    
+    switch (tile) {
+        case TILES.TREE: {
+            let tree = gameState.worldObjects[targetKey] || { type: TILES.TREE, health: 10 };
+            gameState.worldObjects[targetKey] = tree;
+            const damage = gameState.tools.axe ? 5 : 1;
+            tree.health -= damage;
+            depleteEnergy(gameState.tools.axe ? 1.5/12 : 1/12);
+            gameState.activeAnimations.push({ x: target.x, y: target.y, type: 'chop', progress: 0, maxProgress: 20 });
+            interactionDidDamage = true;
+            if (tree.health <= 0) {
+                gameState.inventory.wood += 5;
+                gameState.world[target.y][target.x] = TILES.STUMP;
+                delete gameState.worldObjects[targetKey];
+                gameState.xp += 1;
+                logMessage(`Felled tree. +5 wood, +1 XP.`, '#98c379');
+                checkLevelUp();
+            } else {
+                logMessage(`Chopping tree... (${tree.health}/10)`, '#e5c07b');
+            }
+            break;
+        }
+        case TILES.ROCK: {
+            if (gameState.tools.pickaxe) {
+                let rock = gameState.worldObjects[targetKey] || { type: TILES.ROCK, health: 15 };
+                gameState.worldObjects[targetKey] = rock;
+                rock.health -= 5;
+                depleteEnergy(8/36);
+                gameState.activeAnimations.push({ x: target.x, y: target.y, type: 'mine', progress: 0, maxProgress: 20 });
+                interactionDidDamage = true;
+                if (rock.health <= 0) {
+                    gameState.inventory.stone += 5;
+                    gameState.world[target.y][target.x] = TILES.MINED_ROCK;
+                    delete gameState.worldObjects[targetKey];
+                    gameState.xp += 2;
+                    logMessage(`Broke rock. +5 stone, +2 XP.`, '#98c379');
+                    if (Math.random() < 0.1) {
+                        gameState.inventory.gems++;
+                        gameState.xp += 5;
+                        logMessage(`You found a rare gem! +5 XP`, '#61afef');
+                    }
+                    checkLevelUp();
+                } else {
+                    logMessage(`Mining rock... (${rock.health}/15)`, '#c7c07b');
+                }
+            } else {
+                logMessage("You need a pickaxe to mine this.", '#e06c75');
+            }
+            break;
+        }
+        case TILES.BERRY_BUSH: {
+            gameState.inventory.berries += 3;
+            gameState.world[target.y][target.x] = TILES.EMPTY_BUSH;
+            logMessage(`You found 3 berries.`, '#c56183');
+            break;
+        }
+        case TILES.MOONPETAL_FLOWER: {
+            gameState.inventory.petals++;
+            gameState.world[target.y][target.x] = TILES.GRASS;
+            logMessage(`You picked a glowing Moonpetal.`, '#a188d9');
+            break;
+        }
+        case TILES.BONFIRE: {
+            if (gameState.worldObjects[targetKey]) {
+                if (gameState.inventory.flint > 0 && gameState.inventory.steel > 0) {
+                    gameState.inventory.flint -= 1;
+                    gameState.inventory.steel -= 1;
+                    gameState.world[target.y][target.x] = TILES.BONFIRE_LIT;
+                    delete gameState.worldObjects[targetKey];
+                    gameState.quest.bonfiresLit++;
+                    logMessage("The bonfire roars to life, sending a signal skyward!", '#ff4500');
+                    updateQuestLog();
+                    if (gameState.quest.bonfiresLit >= gameState.quest.totalBonfires) {
+                        victoryScreen.classList.remove('hidden');
+                        victoryScreen.classList.add('flex');
+                        gameState.paused = true;
+                    }
+                } else {
+                    logMessage(`The bonfire needs flint and steel to light.`, '#e06c75');
+                }
+            }
+            break;
+        }
+        case TILES.TENT: {
+             if (gameState.isNight) {
+                logMessage("You sleep until morning.", '#61afef');
+                sleep();
+             } else {
+                logMessage("You can only sleep at night.", '#e06c75');
+             }
+             break;
+        }
+        case TILES.ROB: { // Interaction with Rob
+            const now = Date.now();
+            if (now - gameState.rob.lastInteraction > 5000) {
+                gameState.rob.lastInteraction = now;
+                if (!gameState.rob.following) {
+                    gameState.rob.following = true;
+                    gameState.rob.wandering.isWandering = false;
+                    logMessage("Rob: 'I'm with you! Let's find Tris.'", '#8b4513');
+                    gameState.quest.friendsFound++;
+                    updateQuestLog();
+                } else {
+                    logMessage(`Rob: "${gameState.rob.adviceMessages[Math.floor(Math.random() * gameState.rob.adviceMessages.length)]}"`, '#8b4513');
+                }
+                gameState.xp += 1;
+                logMessage("You feel more determined. (+1 XP)", '#8b4513');
+                if (Math.random() < 0.4) {
+                    const offer = gameState.rob.itemOffers[Math.floor(Math.random() * gameState.rob.itemOffers.length)];
+                    gameState.inventory[offer.item] += offer.amount;
+                    logMessage(`Rob gives you something: "${offer.message}"`, '#61afef');
+                    gameState.xp += 2;
+                }
+                checkLevelUp();
+            }
+            break;
+        }
+        case TILES.TRIS: { // Interaction with Tris
+            const now = Date.now();
+            if (now - gameState.tris.lastInteraction > 5000) {
+                gameState.tris.lastInteraction = now;
+                if (!gameState.tris.following) {
+                    gameState.tris.following = true;
+                    gameState.tris.wandering.isWandering = false;
+                    logMessage("Tris: 'There you are! Now let's find Rob.'", '#228b22');
+                    gameState.quest.friendsFound++;
+                    updateQuestLog();
+                } else {
+                    logMessage(`Tris: "${gameState.tris.adviceMessages[Math.floor(Math.random() * gameState.tris.adviceMessages.length)]}"`, '#228b22');
+                }
+                gameState.xp += 1;
+                logMessage("You feel more clever. (+1 XP)", '#228b22');
+                if (Math.random() < 0.4) {
+                    const offer = gameState.tris.itemOffers[Math.floor(Math.random() * gameState.tris.itemOffers.length)];
+                    gameState.inventory[offer.item] += offer.amount;
+                    logMessage(`Tris offers you a resource: "${offer.message}"`, '#61afef');
+                    gameState.xp += 2;
+                }
+                checkLevelUp();
+            }
+            break;
+        }
+    }
+    
+    if (interactionDidDamage) {
+        gameState.playerAnimation.toolSwing = 15;
+    }
+}
+
+let keysPressed = {};
+let windowHasFocus = true;
+function handleInput() {
+    if (gameState.isGameOver || gameState.paused || gameState.player.moveCooldown > 0) return;
+    
+    if (Object.keys(keysPressed).length > 10) keysPressed = {};
+    const { player } = gameState;
+    let newX = player.x;
+    let newY = player.y;
+    
+    player.isMoving = false;
+
+    let moveX = 0;
+    let moveY = 0;
+    
+    if (keysPressed['w'] || keysPressed['ArrowUp']) moveY--;
+    if (keysPressed['s'] || keysPressed['ArrowDown']) moveY++;
+    if (keysPressed['a'] || keysPressed['ArrowLeft']) moveX--;
+    if (keysPressed['d'] || keysPressed['ArrowRight']) moveX++;
+    
+    if (moveX !== 0 || moveY !== 0) {
+        player.isMoving = true;
+        
+        if (moveY < 0 && moveX === 0) player.direction = 'up';
+        else if (moveY > 0 && moveX === 0) player.direction = 'down';
+        else if (moveX < 0 && moveY === 0) player.direction = 'left';
+        else if (moveX > 0 && moveY === 0) player.direction = 'right';
+        else if (moveY < 0 && moveX < 0) player.direction = 'up_left';
+        else if (moveY < 0 && moveX > 0) player.direction = 'up_right';
+        else if (moveY > 0 && moveX < 0) player.direction = 'down_left';
+        else if (moveY > 0 && moveX > 0) player.direction = 'down_right';
+        
+        newX += moveX;
+        newY += moveY;
+    } else {
+        player.isMoving = false;
+    }
+    
+    if (player.isMoving) {
+        if (newX >= 0 && newX < MAP_SIZE && newY >= 0 && newY < MAP_SIZE) {
+            const targetTile = gameState.world[newY][newX];
+            
+            if (targetTile !== TILES.TREE && targetTile !== TILES.ROCK && targetTile !== TILES.WATER && 
+                targetTile !== TILES.BONFIRE && targetTile !== TILES.BONFIRE_LIT && targetTile !== TILES.MOUNTAIN && 
+                !isPositionOccupied(newX, newY)) {
+                player.x = newX;
+                player.y = newY;
+                player.moveCooldown = 5;
+                depleteEnergy(0.2 / 12);
+            }
+        }
+    }
+}
+
+
+function updateAnimations() {
+    gameState.activeAnimations = gameState.activeAnimations.filter(anim => {
+        anim.progress++;
+        return anim.progress < anim.maxProgress;
+    });
+
+    const { playerAnimation, player } = gameState;
+    if (player.isMoving) {
+        playerAnimation.walkCycle = (playerAnimation.walkCycle + 0.25) % (Math.PI * 2);
+    }
+    
+    if (playerAnimation.toolSwing > 0) playerAnimation.toolSwing--;
+    if (gameState.rob.isMoving) gameState.rob.walkCycle = (gameState.rob.walkCycle + 0.2) % (Math.PI * 2);
+    if (gameState.tris.isMoving) gameState.tris.walkCycle = (gameState.tris.walkCycle + 0.2) % (Math.PI * 2);
+}
+
+function gameOver(reason) {
+    if (gameState.isGameOver) return;
+    gameState.isGameOver = true;
+    gameOverReason.textContent = reason;
+    gameOverScreen.classList.remove('hidden');
+    gameOverScreen.classList.add('flex');
+}
+
+function getRandomAnimalType() {
+    const random = Math.random();
+    if (random < 0.4) return 'squirrel';
+    if (random < 0.7) return 'rabbit';
+    if (random < 0.9) return 'wolf';
+    return 'bear';
+}
+
+function spawnAnimals(count) {
+    try {
+        const maxAnimals = 12;
+        const currentAnimalCount = gameState.animals.length;
+        if (currentAnimalCount >= maxAnimals) return;
+        const numToSpawn = Math.min(count, maxAnimals - currentAnimalCount);
+
+        for (let i = 0; i < numToSpawn; i++) {
+            let x, y, attempts = 0;
+            do {
+                x = Math.floor(Math.random() * MAP_SIZE);
+                y = Math.floor(Math.random() * MAP_SIZE);
+                attempts++;
+                if (attempts > 50) break;
+            } while (gameState.world[y][x] !== TILES.GRASS || (Math.abs(x-gameState.player.x) < 10 && Math.abs(y-gameState.player.y) < 10)); 
+            
+            if (attempts > 50) continue;
+            
+            const type = getRandomAnimalType();
+            let hp, maxHp;
+            if (type === 'squirrel') { hp = 3; maxHp = 3; } 
+            else if (type === 'rabbit') { hp = 2; maxHp = 2; } 
+            else if (type === 'bear') { hp = 20; maxHp = 20; } 
+            else { hp = 10; maxHp = 10; } // Wolf
+            
+            const animalData = { x, y, type, state: 'wander', wanderTarget: { x: null, y: null }, direction: 'down', isMoving: false, walkCycle: 0, hp, maxHp, lastHitTimer: 0 };
+            
+            if (type === 'wolf') {
+                animalData.packId = null;
+                animalData.isPackLeader = false;
+                animalData.packTarget = { x: null, y: null };
+                animalData.smellRange = 12;
+                animalData.lastSmellCheck = 0;
+            }
+            gameState.animals.push(animalData);
+        }
+    } catch (error) { console.error("Error in spawnAnimals:", error); }
+}
+
+function spawnInitialAnimals() {
+    try {
+        const initialCount = 6 + Math.floor(Math.random() * 5);
+        spawnAnimals(initialCount);
+        logMessage(`The wilderness stirs with ${initialCount} creatures...`, '#e5c07b');
+    } catch (error) {
+        console.error("Error in spawnInitialAnimals:", error);
+        logMessage("The wilderness remains quiet...", '#e5c07b');
+    }
+}
+
+
+// Wolf Pack Management System
+function formWolfPacks() {
+    try {
+        const wolves = gameState.animals.filter(animal => animal.type === 'wolf');
+        const unassignedWolves = wolves.filter(wolf => !wolf.packId);
+        
+        unassignedWolves.forEach(wolf => {
+            if (wolf.packId) return;
+            const nearbyWolves = wolves.filter(otherWolf => 
+                otherWolf !== wolf && !otherWolf.packId &&
+                Math.abs(wolf.x - otherWolf.x) <= 8 && Math.abs(wolf.y - otherWolf.y) <= 8
+            );
+            
+            if (nearbyWolves.length > 0) {
+                const packId = `pack_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                wolf.packId = packId;
+                wolf.isPackLeader = true;
+                nearbyWolves.forEach(otherWolf => {
+                    otherWolf.packId = packId;
+                    otherWolf.isPackLeader = false;
+                });
+                logMessage(`A wolf pack forms...`, '#e5c07b');
+            }
+        });
+    } catch (error) { console.error("Error in formWolfPacks:", error); }
+}
+
+function getPackMembers(packId) { return gameState.animals.filter(animal => animal.packId === packId); }
+function getPackLeader(packId) { return gameState.animals.find(animal => animal.packId === packId && animal.isPackLeader); }
+
+function coordinatePackHunting(wolf) {
+    try {
+        if (!wolf.packId) return;
+        const packMembers = getPackMembers(wolf.packId);
+        const packLeader = getPackLeader(wolf.packId);
+        if (!packLeader || packMembers.length < 2) return;
+        
+        if (wolf.isPackLeader) {
+            const distToPlayer = Math.abs(wolf.x - gameState.player.x) + Math.abs(wolf.y - gameState.player.y);
+            if (distToPlayer <= wolf.smellRange) {
+                wolf.packTarget.x = gameState.player.x;
+                wolf.packTarget.y = gameState.player.y;
+                wolf.state = 'hunt';
+                packMembers.forEach(member => {
+                    if (member !== wolf) {
+                        member.state = 'hunt';
+                        member.packTarget.x = gameState.player.x;
+                        member.packTarget.y = gameState.player.y;
+                    }
+                });
+            }
+        } else {
+            if (packLeader.packTarget.x !== null && packLeader.packTarget.y !== null) {
+                wolf.packTarget.x = packLeader.packTarget.x;
+                wolf.packTarget.y = packLeader.packTarget.y;
+                wolf.state = 'hunt';
+            }
+        }
+    } catch (error) { console.error("Error in coordinatePackHunting:", error); }
+}
+
+function getPackAttackPosition(wolf, player) {
+    try {
+        if (!wolf.packId) return { x: player.x, y: player.y };
+        const packMembers = getPackMembers(wolf.packId);
+        const packLeader = getPackLeader(wolf.packId);
+        if (!packLeader || packMembers.length < 2) return { x: player.x, y: player.y };
+        
+        const viewportLeft = Math.floor(gameState.camera.x / TILE_SIZE);
+        const viewportRight = viewportLeft + viewportTileCountX;
+        const viewportTop = Math.floor(gameState.camera.y / TILE_SIZE);
+        const viewportBottom = viewportTop + viewportTileCountY;
+        
+        const visiblePackMembers = packMembers.filter(member => 
+            member.x >= viewportLeft && member.x < viewportRight &&
+            member.y >= viewportTop && member.y < viewportBottom
+        );
+        
+        if (visiblePackMembers.length < 2) return { x: player.x, y: player.y };
+        
+        const attackPositions = [
+            { x: player.x - 1, y: player.y }, { x: player.x + 1, y: player.y },
+            { x: player.x, y: player.y - 1 }, { x: player.x, y: player.y + 1 },
+            { x: player.x - 1, y: player.y - 1 }, { x: player.x + 1, y: player.y - 1 },
+            { x: player.x - 1, y: player.y + 1 }, { x: player.x + 1, y: player.y + 1 }
+        ];
+        
+        const wolfIndex = visiblePackMembers.findIndex(member => member === wolf);
+        if (wolfIndex < attackPositions.length) return attackPositions[wolfIndex];
+        
+        const angle = (wolfIndex * 2 * Math.PI) / visiblePackMembers.length;
+        return {
+            x: player.x + Math.round(Math.cos(angle) * 2),
+            y: player.y + Math.round(Math.sin(angle) * 2)
+        };
+    } catch (error) {
+        console.error("Error in getPackAttackPosition:", error);
+        return { x: player.x, y: player.y };
+    }
+}
+
+function dropLoot(animalType) {
+    try {
+        if (!animalType || !gameState.lootItems) return;
+        let lootTier, dropChance;
+        switch (animalType) {
+            case 'squirrel': case 'rabbit': lootTier = 'common'; dropChance = 0.3; break;
+            case 'wolf': lootTier = 'uncommon'; dropChance = 0.4; break;
+            case 'bear': lootTier = 'rare'; dropChance = 0.6; break;
+            default: return;
+        }
+        
+        if (!gameState.lootItems[lootTier] || !Array.isArray(gameState.lootItems[lootTier])) return;
+        
+        if (Math.random() < dropChance) {
+            const lootPool = gameState.lootItems[lootTier];
+            const randomItem = lootPool[Math.floor(Math.random() * lootPool.length)];
+            if (!randomItem || !randomItem.type) return;
+            
+            if (gameState.inventory.hasOwnProperty(randomItem.type)) {
+                gameState.inventory[randomItem.type] += randomItem.amount || 1;
+                logMessage(`Found ${randomItem.name}!`, '#61afef');
+                
+                if (randomItem.type === 'potion') {
+                    gameState.player.health = Math.min(100 + gameState.playerModifiers.healthBonus, gameState.player.health + 20);
+                    logMessage("Potion restores health!", '#98c379');
+                } else if (randomItem.type === 'elixir') {
+                    gameState.player.health = Math.min(100 + gameState.playerModifiers.healthBonus, gameState.player.health + 50);
+                    logMessage("Elixir greatly restores health!", '#98c379');
+                } else if (randomItem.type === 'weapon') {
+                    if (gameState.tools) {
+                        gameState.tools.sword = true;
+                        logMessage("You found an iron sword!", '#fbbf24');
+                    }
+                }
+            }
+        }
+    } catch (error) { console.error("Error in dropLoot:", error); }
+}
+
+function isNearCampfire(x, y) {
+    for (let key in gameState.placedObjects) {
+        const obj = gameState.placedObjects[key];
+        if (obj.type === TILES.CAMPFIRE) {
+            if (Math.sqrt(Math.pow(x - obj.x, 2) + Math.pow(y - obj.y, 2)) <= 4) return true;
+        }
+    }
+    return false;
+}
+
+function updateAnimals() {
+    try {
+        const { player } = gameState;
+        const playerSafe = isNearCampfire(player.x, player.y);
+
+        gameState.animals.forEach(animal => {
+            const oldX = animal.x; const oldY = animal.y;
+            if (animal.lastHitTimer > 0) animal.lastHitTimer--;
+            
+            const distToPlayer = Math.sqrt(Math.pow(player.x - animal.x, 2) + Math.pow(player.y - animal.y, 2));
+            const nearFire = isNearCampfire(animal.x, animal.y);
+
+            if (nearFire) animal.state = 'flee';
+            else if (animal.type === 'squirrel' || animal.type === 'rabbit') animal.state = distToPlayer <= 6 ? 'flee' : 'wander';
+            else if (animal.type === 'bear') animal.state = (distToPlayer <= 8 || animal.hp < animal.maxHp) ? 'hunt' : 'wander';
+            else if (animal.type === 'wolf') {
+                coordinatePackHunting(animal);
+                if (animal.smellRange && distToPlayer <= animal.smellRange) {
+                    animal.state = 'hunt';
+                    if (animal.isPackLeader) { animal.packTarget.x = player.x; animal.packTarget.y = player.y; }
+                } else if (distToPlayer > animal.smellRange + 2) {
+                    animal.state = 'wander';
+                    if (animal.isPackLeader) { animal.packTarget.x = null; animal.packTarget.y = null; }
+                }
+            } else if (distToPlayer <= 4 || animal.hp < animal.maxHp) animal.state = 'hunt';
+            else if (distToPlayer > 5) animal.state = 'wander';
+            
+            let moveX = 0, moveY = 0;
+            switch (animal.state) {
+                case 'hunt':
+                    if (animal.type === 'wolf' && animal.packId) {
+                        const attackPos = getPackAttackPosition(animal, player);
+                        if (animal.x < attackPos.x) moveX = 1; else if (animal.x > attackPos.x) moveX = -1;
+                        if (animal.y < attackPos.y) moveY = 1; else if (animal.y > attackPos.y) moveY = -1;
+                    } else {
+                        if (animal.x < player.x) moveX = 1; else if (animal.x > player.x) moveX = -1;
+                        if (animal.y < player.y) moveY = 1; else if (animal.y > player.y) moveY = -1;
+                    }
+                    break;
+                case 'flee':
+                    if (animal.type === 'squirrel' || animal.type === 'rabbit') {
+                        if (animal.x < player.x) moveX = -1; else if (animal.x > player.x) moveX = 1;
+                        if (animal.y < player.y) moveY = -1; else if (animal.y > player.y) moveY = 1;
+                    } else {
+                        const fire = Object.values(gameState.placedObjects).find(o => o.type === TILES.CAMPFIRE);
+                        if (fire) {
+                            if (animal.x < fire.x) moveX = -1; if (animal.x > fire.x) moveX = 1;
+                            if (animal.y < fire.y) moveY = -1; if (animal.y > fire.y) moveY = 1;
+                        }
+                    }
+                    break;
+                case 'wander':
+                    if (animal.wanderTarget.x === null || (animal.x === animal.wanderTarget.x && animal.y === animal.wanderTarget.y)) {
+                        animal.wanderTarget.x = animal.x + Math.floor(Math.random() * 11) - 5;
+                        animal.wanderTarget.y = animal.y + Math.floor(Math.random() * 11) - 5;
+                    } else {
+                        if (animal.x < animal.wanderTarget.x) moveX = 1; else if (animal.x > animal.wanderTarget.x) moveX = -1;
+                        if (animal.y < animal.wanderTarget.y) moveY = 1; else if (animal.y > animal.wanderTarget.y) moveY = -1;
+                    }
+                    break;
+            }
+
+            const newAnimalX = animal.x + moveX;
+            const newAnimalY = animal.y + moveY;
+            const targetTile = gameState.world[newAnimalY] ? gameState.world[newAnimalY][newAnimalX] : TILES.MOUNTAIN;
+            
+            if (targetTile !== undefined && targetTile !== TILES.TREE && targetTile !== TILES.ROCK && targetTile !== TILES.WATER && 
+                targetTile !== TILES.BONFIRE && targetTile !== TILES.BONFIRE_LIT && targetTile !== TILES.MOUNTAIN && 
+                !isPositionOccupied(newAnimalX, newAnimalY)) {
+                animal.x = Math.max(0, Math.min(MAP_SIZE - 1, newAnimalX));
+                animal.y = Math.max(0, Math.min(MAP_SIZE - 1, newAnimalY));
+            }
+            
+            const dx = animal.x - oldX; const dy = animal.y - oldY;
+
+            if (dx === 0 && dy === 0) {
+                animal.isMoving = false;
+            } else {
+                animal.isMoving = true;
+                animal.walkCycle = (animal.walkCycle + 0.2) % (Math.PI * 2);
+                if (Math.abs(dx) > Math.abs(dy)) animal.direction = dx > 0 ? 'right' : 'left';
+                else animal.direction = dy > 0 ? 'down' : 'up';
+            }
+
+            if (animal.state === 'hunt' && animal.x === player.x && animal.y === player.y) {
+                if (!playerSafe) {
+                    gameState.player.health = Math.max(0, gameState.player.health - 1);
+                    logMessage("A wolf attacks you!", '#e06c75');
+                } else {
+                    logMessage("The campfire keeps the wolf at bay.", '#61afef');
+                }
+            }
+        });
+    } catch (error) { console.error("Error in updateAnimals:", error); }
+}
+
+function sleep() {
+    const hoursToSleep = (24 - gameState.time.hour) + 7;
+    gameState.time.hour = 7;
+    gameState.time.minute = 0;
+    gameState.time.day++;
+    
+    const isInTent = gameState.world[gameState.player.y][gameState.player.x] === TILES.TENT;
+    
+    if (isInTent) {
+        gameState.player.energy = 100 + gameState.playerModifiers.energyBonus;
+        gameState.player.health = Math.min(100 + gameState.playerModifiers.healthBonus, gameState.player.health + hoursToSleep * 2);
+        gameState.player.hunger = Math.max(0, gameState.player.hunger - hoursToSleep * 1.5);
+        logMessage(`You wake up fully rested!`, '#61afef');
+    } else {
+        gameState.player.energy = Math.min(100 + gameState.playerModifiers.energyBonus, gameState.player.energy + hoursToSleep * 8);
+        gameState.player.health = Math.min(100 + gameState.playerModifiers.healthBonus, gameState.player.health + hoursToSleep * 2);
+        gameState.player.hunger = Math.max(0, gameState.player.hunger - hoursToSleep * 1.5);
+        logMessage(`You restored some health and energy.`);
+    }
+    
+    regrowResources();
+}
+
+let timeTickCounter = 0;
+const timeSpeed = 3; 
+
+function manageSpawning() {
+    try {
+        gameState.time.animalSpawnTimer--;
+        if (gameState.time.animalSpawnTimer <= 0) {
+            if (gameState.isNight) {
+                logMessage("A howl in the distance...", "#c7c7c7");
+                spawnAnimals(2 + Math.floor(Math.random() * 2));
+                gameState.time.animalSpawnTimer = 100 + Math.random() * 50;
+            } else {
+                spawnAnimals(1 + Math.floor(Math.random() * 2));
+                gameState.time.animalSpawnTimer = 200 + Math.random() * 100;
+            }
+        }
+    } catch (error) {
+        console.error("Error in manageSpawning:", error);
+        gameState.time.animalSpawnTimer = 200;
+    }
+}
+
+
+function updateTime() {
+    timeTickCounter++;
+    if (timeTickCounter < timeSpeed) return;
+    timeTickCounter = 0;
+
+    gameState.time.minute += 1;
+    if (gameState.time.minute >= 60) {
+        gameState.time.minute = 0;
+        gameState.time.hour++;
+    }
+    if (gameState.time.hour >= 24) {
+        gameState.time.hour = 0;
+        gameState.time.day++;
+        regrowResources();
+    }
+    
+    const wasNight = gameState.isNight;
+    gameState.isNight = gameState.time.hour >= 20 || gameState.time.hour < 6;
+
+    if (gameState.isNight && !wasNight) {
+        logMessage("Night falls. The wilderness grows restless...", '#e06c75');
+        spawnAnimals(4);
+        for(let i = 0; i < 5; i++) {
+            let x, y;
+            do {
+                x = Math.floor(Math.random() * MAP_SIZE);
+                y = Math.floor(Math.random() * MAP_SIZE);
+            } while (gameState.world[y][x] !== TILES.GRASS);
+            gameState.world[y][x] = TILES.MOONPETAL_FLOWER;
+        }
+    }
+    if (!gameState.isNight && wasNight) {
+        logMessage("The sun rises.", '#61afef');
+         for (let y = 0; y < MAP_SIZE; y++) {
+            for (let x = 0; x < MAP_SIZE; x++) {
+                if (gameState.world[y][x] === TILES.MOONPETAL_FLOWER) {
+                    gameState.world[y][x] = TILES.GRASS;
+                }
+            }
+        }
+    }
+}
+
+function regrowResources(){
+    logMessage("The forest feels a little fuller.", "#98c379");
+    for (let y = 0; y < MAP_SIZE; y++) {
+        for (let x = 0; x < MAP_SIZE; x++) {
+            const tile = gameState.world[y][x];
+            const key = `${x},${y}`;
+            if([TILES.STUMP, TILES.MINED_ROCK, TILES.EMPTY_BUSH].includes(tile)){
+                if(Math.random() < 0.25){
+                    if(tile === TILES.STUMP) {
+                        gameState.world[y][x] = TILES.TREE;
+                        gameState.worldObjects[key] = { type: TILES.TREE, health: 10 };
+                    }
+                    if(tile === TILES.MINED_ROCK) {
+                        gameState.world[y][x] = TILES.ROCK;
+                        gameState.worldObjects[key] = { type: TILES.ROCK, health: 15 };
+                    }
+                    if(tile === TILES.EMPTY_BUSH) gameState.world[y][x] = TILES.BERRY_BUSH;
+                }
+            }
+        }
+    }
+}
+
+
+function depleteEnergy(amount) {
+    gameState.player.energy = Math.max(0, gameState.player.energy - amount);
+    if(gameState.player.energy === 0){
+        gameState.player.health = Math.max(0, gameState.player.health - amount * 2);
+    }
+}
+
+function updateStats() {
+    gameState.player.hunger = Math.max(0, gameState.player.hunger - 0.01);
+    if (gameState.player.hunger === 0) {
+        gameState.player.health = Math.max(0, gameState.player.health - 0.05);
+    }
+    if (gameState.player.health <= 0) gameOver("You ran out of health!");
+    if (gameState.player.hunger <= 0 && gameState.player.health <= 0) gameOver("You starved!");
+    if (gameState.player.energy <= 0 && gameState.player.health <= 0) gameOver("You collapsed from exhaustion!");
+}
+
+function updateCamera() {
+    const { camera, player } = gameState;
+    const targetX = player.x * TILE_SIZE - canvas.width / 2 + TILE_SIZE / 2;
+    const targetY = player.y * TILE_SIZE - canvas.height / 2 + TILE_SIZE / 2;
+    
+    camera.x += (targetX - camera.x) * 0.1;
+    camera.y += (targetY - camera.y) * 0.1;
+
+    const maxX = MAP_SIZE * TILE_SIZE - canvas.width;
+    const maxY = MAP_SIZE * TILE_SIZE - canvas.height;
+    camera.x = Math.max(0, Math.min(camera.x, maxX));
+    camera.y = Math.max(0, Math.min(camera.y, maxY));
+}
+
+// --- Drawing ---
+
+function drawPlayerSprite(x, y, frame) { // Dave, The Seeker (Player)
+    const PIXEL_SIZE = 4; 
+    const SPRITE_WIDTH = 16;
+    const SPRITE_OFFSET_X = TILE_SIZE / 2 - (SPRITE_WIDTH * PIXEL_SIZE) / 2;
+    const SPRITE_OFFSET_Y = 10;
+
+    const colors = {
+        cloakGreen: '#3a5f45', darkCloakGreen: '#2a4f35',
+        shirtTan: '#c2b280', pantsBrown: '#654321',
+        skin: '#fde3a7', darkSkin: '#e0c282',
+        beardRed: '#a0522d', darkBeardRed: '#8b4513',
+        black: '#212121',
+        toolHandle: '#966F33', toolHead: '#a9a9a9', swordBlade: '#dadada',
+    };
+
+    ctx.save();
+    ctx.translate(x + SPRITE_OFFSET_X, y + SPRITE_OFFSET_Y);
+    const p = (px, py, color) => {
+        ctx.fillStyle = color;
+        ctx.fillRect(px * PIXEL_SIZE, py * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
+    };
+    
+    // Base standing down sprite
+    const baseSprite = [
+        // Head
+        [5,2,colors.skin],[6,2,colors.skin],[7,2,colors.skin],[8,2,colors.skin],[9,2,colors.skin],[10,2,colors.skin],
+        [4,3,colors.skin],[5,3,colors.black],[6,3,colors.skin],[7,3,colors.skin],[8,3,colors.skin],[9,3,colors.black],[10,3,colors.skin],
+        [4,4,colors.beardRed],[5,4,colors.beardRed],[6,4,colors.beardRed],[7,4,colors.beardRed],[8,4,colors.beardRed],[9,4,colors.beardRed],[10,4,colors.beardRed],
+        [5,5,colors.darkBeardRed],[6,5,colors.darkBeardRed],[7,5,colors.darkBeardRed],[8,5,colors.darkBeardRed],[9,5,colors.darkBeardRed],
+        // Body
+        [4,6,colors.cloakGreen],[5,6,colors.cloakGreen],[6,6,colors.cloakGreen],[7,6,colors.cloakGreen],[8,6,colors.cloakGreen],[9,6,colors.cloakGreen],[10,6,colors.cloakGreen],[11,6,colors.cloakGreen],
+        [3,7,colors.cloakGreen],[4,7,colors.darkCloakGreen],[5,7,colors.shirtTan],[6,7,colors.shirtTan],[7,7,colors.shirtTan],[8,7,colors.shirtTan],[9,7,colors.shirtTan],[10,7,colors.darkCloakGreen],[11,7,colors.cloakGreen],[12,7,colors.cloakGreen],
+        [3,8,colors.darkCloakGreen],[4,8,colors.darkCloakGreen],[5,8,colors.shirtTan],[6,8,colors.shirtTan],[7,8,colors.shirtTan],[8,8,colors.shirtTan],[9,8,colors.shirtTan],[10,8,colors.darkCloakGreen],[11,8,colors.darkCloakGreen],
+        [4,9,colors.darkCloakGreen],[5,9,colors.pantsBrown],[6,9,colors.pantsBrown],[7,9,colors.pantsBrown],[8,9,colors.pantsBrown],[9,9,colors.pantsBrown],[10,9,colors.darkCloakGreen],
+        [4,10,colors.pantsBrown],[5,10,colors.pantsBrown],[6,10,colors.pantsBrown],[7,10,colors.pantsBrown],[8,10,colors.pantsBrown],[9,10,colors.pantsBrown],[10,10,colors.pantsBrown],
+        [5,11,colors.pantsBrown],[6,11,colors.pantsBrown],[8,11,colors.pantsBrown],[9,11,colors.pantsBrown],
+    ];
+
+    baseSprite.forEach(([px, py, color]) => p(px, py, color));
+    
+    // Add tool if swinging
+    if (frame.includes('using_axe')) {
+        p(12, 6, colors.toolHandle); p(11, 7, colors.toolHandle); p(10, 8, colors.toolHandle);
+        p(13, 4, colors.toolHead); p(13, 5, colors.toolHead); p(12, 5, colors.toolHead);
+    } else if (frame.includes('using_pickaxe')) {
+        p(12, 6, colors.toolHandle); p(11, 7, colors.toolHandle); p(10, 8, colors.toolHandle);
+        p(14, 4, colors.toolHead); p(13, 5, colors.toolHead); p(12, 5, colors.toolHead);
+    } else if (frame.includes('using_sword')) {
+        p(12, 7, colors.toolHandle); p(11, 8, colors.toolHandle);
+        p(13, 6, colors.swordBlade); p(13, 5, colors.swordBlade); p(13, 4, colors.swordBlade);
+    }
+    
+    // Simple walking animation by moving a leg
+    if (frame.includes('walking') && (Math.floor(gameState.playerAnimation.walkCycle / Math.PI) % 2 === 0)) {
+       p(6,12, colors.pantsBrown); p(7,12, colors.pantsBrown);
+    } else if (frame.includes('walking')) {
+       p(8,12, colors.pantsBrown); p(9,12, colors.pantsBrown);
+    }
+
+    ctx.restore();
+}
+
+function drawRobSprite(x, y, frame) { // Rob, The Sentinel (Friend 1)
+    const PIXEL_SIZE = 4;
+    const SPRITE_WIDTH = 16;
+    const SPRITE_OFFSET_X = TILE_SIZE / 2 - (SPRITE_WIDTH * PIXEL_SIZE) / 2;
+    const SPRITE_OFFSET_Y = 10;
+
+    const colors = {
+        tunicBlue: '#6a7d9e', darkTunicBlue: '#4a5d7e',
+        pantsGrey: '#5a5a5a',
+        skin: '#fde3a7', darkSkin: '#e0c282',
+        beardBrown: '#5c4033', darkBeardBrown: '#422d21',
+        black: '#212121',
+    };
+    
+    ctx.save();
+    ctx.translate(x + SPRITE_OFFSET_X, y + SPRITE_OFFSET_Y);
+    const p = (px, py, color) => {
+        ctx.fillStyle = color;
+        ctx.fillRect(px * PIXEL_SIZE, py * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
+    };
+    
+    // Base sprite
+    [   // Head
+        [5,1,colors.skin],[6,1,colors.skin],[7,1,colors.skin],[8,1,colors.skin],[9,1,colors.skin],[10,1,colors.skin],
+        [4,2,colors.skin],[5,2,colors.black],[6,2,colors.skin],[7,2,colors.skin],[8,2,colors.skin],[9,2,colors.black],[10,2,colors.skin],
+        [3,3,colors.beardBrown],[4,3,colors.beardBrown],[5,3,colors.beardBrown],[6,3,colors.beardBrown],[7,3,colors.beardBrown],[8,3,colors.beardBrown],[9,3,colors.beardBrown],[10,3,colors.beardBrown],[11,3,colors.beardBrown],
+        [4,4,colors.darkBeardBrown],[5,4,colors.darkBeardBrown],[6,4,colors.darkBeardBrown],[7,4,colors.darkBeardBrown],[8,4,colors.darkBeardBrown],[9,4,colors.darkBeardBrown],[10,4,colors.darkBeardBrown],
+        [5,5,colors.darkBeardBrown],[6,5,colors.darkBeardBrown],[7,5,colors.darkBeardBrown],[8,5,colors.darkBeardBrown],[9,5,colors.darkBeardBrown],
+        // Body
+        [3,6,colors.tunicBlue],[4,6,colors.tunicBlue],[5,6,colors.tunicBlue],[6,6,colors.tunicBlue],[7,6,colors.tunicBlue],[8,6,colors.tunicBlue],[9,6,colors.tunicBlue],[10,6,colors.tunicBlue],[11,6,colors.tunicBlue],
+        [2,7,colors.tunicBlue],[3,7,colors.darkTunicBlue],[4,7,colors.darkTunicBlue],[5,7,colors.darkTunicBlue],[6,7,colors.darkTunicBlue],[7,7,colors.darkTunicBlue],[8,7,colors.darkTunicBlue],[9,7,colors.darkTunicBlue],[10,7,colors.darkTunicBlue],[11,7,colors.darkTunicBlue],[12,7,colors.tunicBlue],
+        [2,8,colors.darkTunicBlue],[3,8,colors.darkTunicBlue],[4,8,colors.darkTunicBlue],[5,8,colors.darkTunicBlue],[6,8,colors.darkTunicBlue],[7,8,colors.darkTunicBlue],[8,8,colors.darkTunicBlue],[9,8,colors.darkTunicBlue],[10,8,colors.darkTunicBlue],[11,8,colors.darkTunicBlue],[12,8,colors.darkTunicBlue],
+        [3,9,colors.darkTunicBlue],[4,9,colors.pantsGrey],[5,9,colors.pantsGrey],[6,9,colors.pantsGrey],[7,9,colors.pantsGrey],[8,9,colors.pantsGrey],[9,9,colors.pantsGrey],[10,9,colors.pantsGrey],[11,9,colors.darkTunicBlue],
+        [4,10,colors.pantsGrey],[5,10,colors.pantsGrey],[6,10,colors.pantsGrey],[8,10,colors.pantsGrey],[9,10,colors.pantsGrey],[10,10,colors.pantsGrey],
+        [4,11,colors.pantsGrey],[5,11,colors.pantsGrey], [9,11,colors.pantsGrey],[10,11,colors.pantsGrey],
+    ].forEach(([px, py, color]) => p(px, py, color));
+
+    ctx.restore();
+}
+
+function drawTrisSprite(x, y, frame) { // Tris, The Architect (Friend 2)
+    const PIXEL_SIZE = 4;
+    const SPRITE_WIDTH = 16;
+    const SPRITE_OFFSET_X = TILE_SIZE / 2 - (SPRITE_WIDTH * PIXEL_SIZE) / 2;
+    const SPRITE_OFFSET_Y = 10;
+
+    const colors = {
+        tunicBrown: '#8b5a2b', darkTunicBrown: '#654321',
+        pantsDark: '#3d3d3d',
+        skin: '#fde3a7',
+        beardDark: '#4a4a4a', darkBeardDark: '#303030',
+        black: '#212121',
+    };
+
+    ctx.save();
+    ctx.translate(x + SPRITE_OFFSET_X, y + SPRITE_OFFSET_Y);
+    const p = (px, py, color) => {
+        ctx.fillStyle = color;
+        ctx.fillRect(px * PIXEL_SIZE, py * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
+    };
+    
+    // Base sprite
+    [   // Head (balding)
+        [6,1,colors.skin],[7,1,colors.skin],[8,1,colors.skin],[9,1,colors.skin],
+        [5,2,colors.skin],[6,2,colors.black],[7,2,colors.skin],[8,2,colors.skin],[9,2,colors.black],[10,2,colors.skin],
+        [4,3,colors.beardDark],[5,3,colors.beardDark],[6,3,colors.beardDark],[7,3,colors.beardDark],[8,3,colors.beardDark],[9,3,colors.beardDark],[10,3,colors.beardDark],[11,3,colors.beardDark],
+        [5,4,colors.darkBeardDark],[6,4,colors.darkBeardDark],[7,4,colors.darkBeardDark],[8,4,colors.darkBeardDark],[9,4,colors.darkBeardDark],[10,4,colors.darkBeardDark],
+        [6,5,colors.darkBeardDark],[7,5,colors.darkBeardDark],[8,5,colors.darkBeardDark],[9,5,colors.darkBeardDark],
+        // Body
+        [4,6,colors.tunicBrown],[5,6,colors.tunicBrown],[6,6,colors.tunicBrown],[7,6,colors.tunicBrown],[8,6,colors.tunicBrown],[9,6,colors.tunicBrown],[10,6,colors.tunicBrown],
+        [3,7,colors.tunicBrown],[4,7,colors.darkTunicBrown],[5,7,colors.darkTunicBrown],[6,7,colors.darkTunicBrown],[7,7,colors.darkTunicBrown],[8,7,colors.darkTunicBrown],[9,7,colors.darkTunicBrown],[10,7,colors.darkTunicBrown],[11,7,colors.tunicBrown],
+        [3,8,colors.darkTunicBrown],[4,8,colors.darkTunicBrown],[5,8,colors.darkTunicBrown],[6,8,colors.darkTunicBrown],[7,8,colors.darkTunicBrown],[8,8,colors.darkTunicBrown],[9,8,colors.darkTunicBrown],[10,8,colors.darkTunicBrown],[11,8,colors.darkTunicBrown],
+        [4,9,colors.pantsDark],[5,9,colors.pantsDark],[6,9,colors.pantsDark],[7,9,colors.pantsDark],[8,9,colors.pantsDark],[9,9,colors.pantsDark],[10,9,colors.pantsDark],
+        [5,10,colors.pantsDark],[6,10,colors.pantsDark],[8,10,colors.pantsDark],[9,10,colors.pantsDark],
+        [5,11,colors.pantsDark],[6,11,colors.pantsDark],[8,11,colors.pantsDark],[9,11,colors.pantsDark],
+    ].forEach(([px, py, color]) => p(px, py, color));
+
+    ctx.restore();
+}
+
+function drawSpeechBubble(x, y, message) {
+    const bubbleWidth = Math.max(140, message.length * 9);
+    const bubbleHeight = 50;
+    const bubbleX = x + TILE_SIZE / 2 - bubbleWidth / 2;
+    const bubbleY = y - bubbleHeight - 20;
+    
+    ctx.save();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 2;
+    
+    ctx.beginPath();
+    ctx.roundRect(bubbleX, bubbleY, bubbleWidth, bubbleHeight, 16);
+    ctx.fill();
+    ctx.stroke();
+    
+    ctx.beginPath();
+    ctx.moveTo(bubbleX + bubbleWidth / 2 - 8, bubbleY + bubbleHeight);
+    ctx.lineTo(bubbleX + bubbleWidth / 2, bubbleY + bubbleHeight + 8);
+    ctx.lineTo(bubbleX + bubbleWidth / 2 + 8, bubbleY + bubbleHeight);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    
+    ctx.fillStyle = '#333';
+    ctx.font = '12px "Press Start 2P", monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    const words = message.split(' ');
+    const lines = [];
+    let currentLine = '';
+    
+    words.forEach(word => {
+        if ((currentLine + word).length * 9 > bubbleWidth - 20) {
+            if (currentLine) lines.push(currentLine.trim());
+            currentLine = word;
+        } else {
+            currentLine += (currentLine ? ' ' : '') + word;
+        }
+    });
+    if (currentLine) lines.push(currentLine.trim());
+    
+    lines.forEach((line, index) => {
+        const lineY = bubbleY + bubbleHeight / 2 + (index - (lines.length - 1) / 2) * 18;
+        ctx.fillText(line, bubbleX + bubbleWidth / 2, lineY);
+    });
+    
+    ctx.restore();
+}
+
+// Mini Map System
+let miniMapCanvas, miniMapCtx;
+
+function initMiniMap() {
+    miniMapCanvas = document.getElementById('miniMap');
+    miniMapCtx = miniMapCanvas.getContext('2d');
+    miniMapCtx.imageSmoothingEnabled = false;
+}
+
+function toggleMiniMapFullscreen() {
+    gameState.miniMapFullscreen = !gameState.miniMapFullscreen;
+    updateMiniMapDisplay();
+    setTimeout(() => { if (canvas) canvas.focus(); }, 50);
+}
+
+function updateMiniMapDisplay() {
+    const overlay = document.getElementById('miniMapOverlay');
+    const legend = document.getElementById('miniMapLegend');
+    const instructions = document.getElementById('miniMapInstructions');
+    const indicator = document.getElementById('miniMapIndicator');
+    
+    if (gameState.miniMapFullscreen) {
+        overlay.className = 'absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-gray-900 bg-opacity-95 p-6 rounded-lg border border-gray-600 transition-all duration-500 ease-out z-50';
+        overlay.style.transform = 'translate(-50%, -50%)';
+        legend.className = 'text-lg text-center mt-4 text-gray-300';
+        instructions.textContent = 'Press M to minimize or click to close';
+        indicator.style.display = 'none';
+    } else {
+        overlay.className = 'absolute top-4 right-4 bg-gray-900 bg-opacity-90 p-3 rounded-l-lg border border-gray-600 border-r-0 transition-all duration-500 ease-out z-50';
+        overlay.style.transform = 'translateX(calc(100% - 80px))';
+        legend.className = 'text-xs text-center mt-2 text-gray-400';
+        instructions.textContent = 'Press M for fullscreen';
+        indicator.style.display = 'block';
+    }
+    drawMiniMap();
+}
+
+function drawMiniMap() {
+    let displaySize, internalSize;
+    if (gameState.miniMapFullscreen) {
+        const minDimension = Math.min(canvas.clientWidth, canvas.clientHeight);
+        displaySize = Math.floor(minDimension * 0.8);
+        internalSize = displaySize * 2;
+    } else {
+        displaySize = 100;
+        internalSize = 200;
+    }
+    
+    const scale = internalSize / MAP_SIZE;
+    miniMap.width = internalSize;
+    miniMap.height = internalSize;
+    miniMap.style.width = displaySize + 'px';
+    miniMap.style.height = displaySize + 'px';
+    miniMapCtx.imageSmoothingEnabled = false;
+    miniMapCtx.fillStyle = '#2d3748';
+    miniMapCtx.fillRect(0, 0, internalSize, internalSize);
+    
+    for (let y = 0; y < MAP_SIZE; y++) {
+        for (let x = 0; x < MAP_SIZE; x++) {
+            const tile = gameState.world[y][x];
+            let color;
+            switch(tile) {
+                case TILES.GRASS: color = '#5a8b41'; break;
+                case TILES.TREE: color = '#3a5941'; break;
+                case TILES.ROCK: color = '#8d8d8d'; break;
+                case TILES.WATER: color = '#4a90e2'; break;
+                case TILES.MOUNTAIN: color = '#6b7280'; break;
+                default: color = '#5a8b41';
+            }
+            if (tile === TILES.BONFIRE || tile === TILES.BONFIRE_LIT) {
+                color = tile === TILES.BONFIRE_LIT ? '#ff4500' : '#8b4513';
+            }
+            miniMapCtx.fillStyle = color;
+            miniMapCtx.fillRect(x * scale, y * scale, Math.ceil(scale), Math.ceil(scale));
+        }
+    }
+    
+    const drawDot = (entity, color, sizeMultiplier = 0.8) => {
+        if (entity.x > 0 && entity.y > 0) {
+            const mapX = entity.x * scale;
+            const mapY = entity.y * scale;
+            const size = Math.max(2, Math.ceil(scale * sizeMultiplier));
+            miniMapCtx.fillStyle = '#000000';
+            miniMapCtx.fillRect(mapX - 1, mapY - 1, size + 2, size + 2);
+            miniMapCtx.fillStyle = color;
+            miniMapCtx.fillRect(mapX, mapY, size, size);
+        }
+    };
+
+    gameState.animals.forEach(animal => drawDot(animal, '#ef4444'));
+    drawDot(gameState.rob, '#ca8a04'); // amber-600
+    drawDot(gameState.tris, '#16a34a'); // green-600
+    drawDot(gameState.player, '#8b5cf6', 1.0); // Player is bigger
+    
+    const viewportX = gameState.camera.x / TILE_SIZE * scale;
+    const viewportY = gameState.camera.y / TILE_SIZE * scale;
+    const viewportWidth = (canvas.width / TILE_SIZE) * scale;
+    const viewportHeight = (canvas.height / TILE_SIZE) * scale;
+    miniMapCtx.strokeStyle = '#ffffff';
+    miniMapCtx.lineWidth = 2;
+    miniMapCtx.strokeRect(viewportX, viewportY, viewportWidth, viewportHeight);
+}
+
+function draw() {
+    if (gameState.isGameOver || gameState.paused) return;
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    ctx.save();
+    ctx.translate(-gameState.camera.x, -gameState.camera.y);
+
+    const startX = Math.floor(gameState.camera.x / TILE_SIZE);
+    const endX = startX + viewportTileCountX + 2;
+    const startY = Math.floor(gameState.camera.y / TILE_SIZE);
+    const endY = startY + viewportTileCountY + 2;
+
+    for (let y = Math.max(0, startY); y < Math.min(MAP_SIZE, endY); y++) {
+        for (let x = Math.max(0, startX); x < Math.min(MAP_SIZE, endX); x++) {
+            const tile = gameState.world[y][x];
+            ctx.fillStyle = TILE_COLORS[TILES.GRASS];
+            ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            ctx.fillStyle = 'rgba(0,0,0,0.07)';
+            ctx.fillRect(x * TILE_SIZE + 10, y * TILE_SIZE + 15, 4, 12);
+            ctx.fillRect(x * TILE_SIZE + 40, y * TILE_SIZE + 45, 4, 12);
+
+            const key = `${x},${y}`;
+            let shakeX = 0, shakeY = 0;
+            const activeAnim = gameState.activeAnimations.find(a => a.x === x && a.y === y);
+            if (activeAnim) {
+                const intensity = (activeAnim.maxProgress - activeAnim.progress) / activeAnim.maxProgress;
+                shakeX = (Math.random() - 0.5) * 8 * intensity;
+                shakeY = (Math.random() - 0.5) * 8 * intensity;
+            }
+
+            switch(tile) {
+                case TILES.TREE:
+                    ctx.fillStyle = '#6b4f3a'; ctx.fillRect(x*TILE_SIZE+28+shakeX, y*TILE_SIZE+32+shakeY, 8, 32);
+                    ctx.fillStyle = '#3a5941'; ctx.beginPath(); ctx.arc((x+0.5)*TILE_SIZE+shakeX, (y+0.4)*TILE_SIZE+shakeY, TILE_SIZE*0.5, 0, Math.PI*2); ctx.fill();
+                    ctx.fillStyle = '#2d4828'; ctx.beginPath(); ctx.arc((x+0.6)*TILE_SIZE+shakeX, (y+0.5)*TILE_SIZE+shakeY, TILE_SIZE*0.25, 0, Math.PI*2); ctx.fill();
+                    break;
+                case TILES.ROCK:
+                    ctx.save(); ctx.translate(shakeX, shakeY);
+                    ctx.fillStyle = '#8d8d8d'; ctx.beginPath(); ctx.moveTo((x+0.2)*TILE_SIZE, (y+0.8)*TILE_SIZE); ctx.lineTo((x+0.8)*TILE_SIZE, (y+0.8)*TILE_SIZE); ctx.lineTo((x+0.7)*TILE_SIZE, (y+0.3)*TILE_SIZE); ctx.lineTo((x+0.5)*TILE_SIZE, (y+0.2)*TILE_SIZE); ctx.closePath(); ctx.fill();
+                    ctx.fillStyle = '#7a7a7a'; ctx.beginPath(); ctx.moveTo((x+0.2)*TILE_SIZE, (y+0.8)*TILE_SIZE); ctx.lineTo((x+0.4)*TILE_SIZE, (y+0.85)*TILE_SIZE); ctx.lineTo((x+0.5)*TILE_SIZE, (y+0.2)*TILE_SIZE); ctx.closePath(); ctx.fill();
+                    ctx.restore();
+                    break;
+                case TILES.BERRY_BUSH:
+                     ctx.fillStyle = '#2d4828'; ctx.beginPath(); ctx.arc((x+0.5)*TILE_SIZE, (y+0.6)*TILE_SIZE, TILE_SIZE*0.4, 0, Math.PI*2); ctx.fill();
+                     ctx.fillStyle = '#c56183';
+                     ctx.fillRect(x*TILE_SIZE+20, y*TILE_SIZE+32, 8, 8); ctx.fillRect(x*TILE_SIZE+38, y*TILE_SIZE+28, 8, 8); ctx.fillRect(x*TILE_SIZE+25, y*TILE_SIZE+45, 8, 8);
+                    break;
+                case TILES.CAMPFIRE:
+                    const flicker = Math.random();
+                    ctx.fillStyle = '#6b4f3a'; ctx.beginPath(); ctx.moveTo((x+0.2)*TILE_SIZE, (y+0.8)*TILE_SIZE); ctx.lineTo((x+0.8)*TILE_SIZE, (y+0.8)*TILE_SIZE); ctx.lineTo((x+0.5)*TILE_SIZE, (y+0.7)*TILE_SIZE); ctx.closePath(); ctx.fill();
+                    ctx.fillStyle = flicker > 0.66 ? '#ff6a00' : '#ffa500'; ctx.beginPath(); ctx.moveTo((x+0.5)*TILE_SIZE, (y+0.3)*TILE_SIZE); ctx.lineTo((x+0.3)*TILE_SIZE, (y+0.75)*TILE_SIZE); ctx.lineTo((x+0.7)*TILE_SIZE, (y+0.75)*TILE_SIZE); ctx.closePath(); ctx.fill();
+                    ctx.fillStyle = flicker < 0.33 ? '#ffff00' : '#ffd700'; ctx.beginPath(); ctx.moveTo((x+0.5)*TILE_SIZE, (y+0.4)*TILE_SIZE); ctx.lineTo((x+0.4)*TILE_SIZE, (y+0.7)*TILE_SIZE); ctx.lineTo((x+0.6)*TILE_SIZE, (y+0.7)*TILE_SIZE); ctx.closePath(); ctx.fill();
+                    break;
+                case TILES.TENT:
+                    ctx.fillStyle = '#a0522d'; ctx.beginPath(); ctx.moveTo((x+0.1)*TILE_SIZE, (y+0.9)*TILE_SIZE); ctx.lineTo((x+0.5)*TILE_SIZE, (y+0.2)*TILE_SIZE); ctx.lineTo((x+0.9)*TILE_SIZE, (y+0.9)*TILE_SIZE); ctx.closePath(); ctx.fill();
+                    ctx.fillStyle = '#793d22'; ctx.beginPath(); ctx.moveTo((x+0.5)*TILE_SIZE, (y+0.25)*TILE_SIZE); ctx.lineTo((x+0.7)*TILE_SIZE, (y+0.9)*TILE_SIZE); ctx.lineTo((x+0.5)*TILE_SIZE, (y+0.9)*TILE_SIZE); ctx.closePath(); ctx.fill();
+                    break;
+                case TILES.STUMP: 
+                    ctx.fillStyle = '#6b4f3a'; ctx.fillRect(x*TILE_SIZE+20, y*TILE_SIZE+30, 24, 20); 
+                    ctx.fillStyle = '#ab8f7a'; ctx.beginPath(); ctx.ellipse(x*TILE_SIZE+32, y*TILE_SIZE+30, 14, 6, 0, 0, Math.PI*2); ctx.fill();
+                    break;
+                case TILES.MINED_ROCK: ctx.fillStyle = '#6a6a6a'; ctx.fillRect(x*TILE_SIZE+16, y*TILE_SIZE+32, 32, 16); break;
+                case TILES.EMPTY_BUSH: ctx.fillStyle = '#2d4828'; ctx.beginPath(); ctx.arc((x+0.5)*TILE_SIZE, (y+0.6)*TILE_SIZE, TILE_SIZE*0.4, 0, Math.PI*2); ctx.fill(); break;
+                case TILES.MOONPETAL_FLOWER:
+                    ctx.fillStyle = '#6a4a9c'; ctx.fillRect(x*TILE_SIZE+30, y*TILE_SIZE+30, 4, 20);
+                    ctx.fillStyle = '#a188d9'; ctx.beginPath(); ctx.arc(x*TILE_SIZE+32, y*TILE_SIZE+28, 12, 0, Math.PI*2); ctx.fill();
+                    ctx.fillStyle = '#d4c2fc'; ctx.beginPath(); ctx.arc(x*TILE_SIZE+32, y*TILE_SIZE+28, 6, 0, Math.PI*2); ctx.fill();
+                    break;
+                case TILES.BONFIRE:
+                case TILES.BONFIRE_LIT:
+                    ctx.fillStyle = tile === TILES.BONFIRE ? '#8b4513' : '#ff4500';
+                    ctx.fillRect(x*TILE_SIZE + 12, y*TILE_SIZE+8, 40, 48);
+                    ctx.fillStyle = tile === TILES.BONFIRE ? '#654321' : '#ff6347';
+                    ctx.fillRect(x*TILE_SIZE + 18, y*TILE_SIZE+14, 28, 36);
+                    if (tile === TILES.BONFIRE_LIT) {
+                        ctx.fillStyle = '#ff6347';
+                        ctx.beginPath(); ctx.arc(x * TILE_SIZE + 32, y * TILE_SIZE + 32, 8, 0, Math.PI * 2); ctx.fill();
+                    }
+                    break;
+                case TILES.MOUNTAIN:
+                    ctx.fillStyle = '#6b7280'; ctx.beginPath(); ctx.moveTo(x*TILE_SIZE, y*TILE_SIZE+TILE_SIZE); ctx.lineTo(x*TILE_SIZE+TILE_SIZE*0.5, y*TILE_SIZE+TILE_SIZE*0.2); ctx.lineTo(x*TILE_SIZE+TILE_SIZE, y*TILE_SIZE+TILE_SIZE); ctx.closePath(); ctx.fill();
+                    ctx.fillStyle = '#4a5568'; ctx.beginPath(); ctx.moveTo(x*TILE_SIZE+TILE_SIZE*0.2, y*TILE_SIZE+TILE_SIZE); ctx.lineTo(x*TILE_SIZE+TILE_SIZE*0.7, y*TILE_SIZE+TILE_SIZE*0.4); ctx.lineTo(x*TILE_SIZE+TILE_SIZE*0.8, y*TILE_SIZE+TILE_SIZE); ctx.closePath(); ctx.fill();
+                    break;
+            }
+        }
+    }
+    
+    gameState.activeAnimations.forEach(anim => {
+        const progressRatio = anim.progress / anim.maxProgress;
+        ctx.globalAlpha = 1 - progressRatio;
+        for (let i = 0; i < 3; i++) {
+            const particleX = (anim.x + 0.5) * TILE_SIZE + (Math.random() - 0.5) * 40 * (1-progressRatio);
+            const particleY = (anim.y + 0.5) * TILE_SIZE + (Math.random() - 0.5) * 40 * (1-progressRatio);
+            const size = (1 - progressRatio) * 8;
+            if(anim.type === 'chop') ctx.fillStyle = '#ab8f7a'; else if (anim.type === 'mine') ctx.fillStyle = '#a0a0a0';
+            ctx.fillRect(particleX, particleY, size, size);
+        }
+    });
+    ctx.globalAlpha = 1.0;
+
+    const {x, y, direction, isMoving} = gameState.player;
+    const px = x * TILE_SIZE; const py = y * TILE_SIZE;
+    let frame;
+    if (gameState.playerAnimation.toolSwing > 0) {
+        frame = `using_axe_${direction}`; // Simplified for now
+    } else if (isMoving) {
+        frame = `walking_${direction}`;
+    } else {
+        frame = `standing_${direction}`;
+    }
+    drawPlayerSprite(px, py, frame);
+
+    // Draw NPCs
+    drawRobSprite(gameState.rob.x * TILE_SIZE, gameState.rob.y * TILE_SIZE, `standing_down`);
+    if(gameState.rob.speechBubble.visible) drawSpeechBubble(gameState.rob.x * TILE_SIZE, gameState.rob.y * TILE_SIZE, gameState.rob.speechBubble.message);
+    
+    drawTrisSprite(gameState.tris.x * TILE_SIZE, gameState.tris.y * TILE_SIZE, `standing_down`);
+    if(gameState.tris.speechBubble.visible) drawSpeechBubble(gameState.tris.x * TILE_SIZE, gameState.tris.y * TILE_SIZE, gameState.tris.speechBubble.message);
+
+    // Draw animals and their health bars
+    gameState.animals.forEach(animal => {
+        const ax = animal.x * TILE_SIZE;
+        const ay = animal.y * TILE_SIZE;
+        // Simple circle for animals for now, replace with sprites later
+        ctx.fillStyle = 'red';
+        ctx.beginPath();
+        ctx.arc(ax + TILE_SIZE / 2, ay + TILE_SIZE / 2, TILE_SIZE / 4, 0, Math.PI * 2);
+        ctx.fill();
+        
+        if(animal.lastHitTimer > 0) {
+            const healthPercentage = animal.hp / animal.maxHp;
+            ctx.fillStyle = '#4a4a4a'; ctx.fillRect(ax + 8, ay, 48, 6);
+            ctx.fillStyle = '#e06c75'; ctx.fillRect(ax + 8, ay, 48 * healthPercentage, 6);
+        }
+    });
+
+    if (gameState.isNight) {
+        ctx.fillStyle = 'rgba(10, 10, 40, 0.5)'; ctx.fillRect(gameState.camera.x, gameState.camera.y, canvas.width, canvas.height);
+    }
+    
+    const target = getTileInFront();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)'; ctx.lineWidth = 2;
+    ctx.strokeRect(target.x*TILE_SIZE+2, target.y*TILE_SIZE+2, TILE_SIZE-4, TILE_SIZE-4);
+
+    ctx.restore();
+    drawMiniMap();
+}
+
+function updateUI() {
+    const maxHealth = 100 + gameState.playerModifiers.healthBonus;
+    const maxEnergy = 100 + gameState.playerModifiers.energyBonus;
+    
+    healthBar.style.width = `${(gameState.player.health / maxHealth) * 100}%`;
+    hungerBar.style.width = `${gameState.player.hunger}%`;
+    energyBar.style.width = `${(gameState.player.energy / maxEnergy) * 100}%`;
+    levelDisplay.textContent = gameState.level;
+    xpDisplay.textContent = gameState.xp;
+    
+    const xpNeeded = gameState.level * 25;
+    xpBar.style.width = `${Math.min(100, (gameState.xp / xpNeeded) * 100)}%`;
+    
+    const hour = String(gameState.time.hour).padStart(2, '0');
+    const minute = String(gameState.time.minute).padStart(2, '0');
+    timeDisplay.textContent = `Day ${gameState.time.day} - ${hour}:${minute}`;
+    
+    let tools = [];
+    if (gameState.tools.axe) tools.push('Axe');
+    if (gameState.tools.pickaxe) tools.push('Pickaxe');
+    if (gameState.tools.sword) tools.push('Sword');
+    toolStatusUI.textContent = tools.length > 0 ? tools.join(', ') : 'None';
+    
+    document.getElementById('craftAxe').disabled = gameState.inventory.wood < 15 || gameState.tools.axe;
+    document.getElementById('craftPickaxe').disabled = gameState.inventory.wood < 20 || gameState.tools.pickaxe;
+    document.getElementById('craftSword').disabled = gameState.inventory.wood < 25 || gameState.tools.sword;
+    document.getElementById('craftCarvedStone').disabled = gameState.inventory.stone < 50;
+    document.getElementById('craftCampfire').disabled = gameState.inventory.wood < 15 || gameState.inventory.stone < 5;
+    document.getElementById('craftTent').disabled = gameState.inventory.wood < 20 || gameState.inventory.stone < 10;
+    document.getElementById('craftFlint').disabled = gameState.inventory.stone < 10;
+    document.getElementById('craftSteel').disabled = gameState.inventory.ore < 5;
+    
+    document.getElementById('eatBerry').disabled = gameState.inventory.berries <= 0;
+    document.getElementById('eatCookedMeat').disabled = gameState.inventory.cookedMeat <= 0;
+    document.getElementById('cookMeat').disabled = gameState.inventory.rawMeat <= 0 || !isNearCampfire(gameState.player.x, gameState.player.y);
+}
+
+
+// --- Game Loop ---
+let lastTime = 0;
+const gameTick = 100;
+
+function gameLoop(timestamp) {
+    try {
+        if (gameState.isGameOver) return;
+        if (document.activeElement !== canvas && windowHasFocus) canvas.focus();
+        if (!windowHasFocus) keysPressed = {};
+        
+        if (!gameState.paused) {
+            if (gameState.player.moveCooldown > 0) gameState.player.moveCooldown--;
+            handleInput();
+
+            if (timestamp - lastTime > gameTick) {
+                lastTime = timestamp;
+                manageSpawning();
+                formWolfPacks();
+                updateTime();
+                updateStats();
+                updateAnimals();
+            }
+            
+            updateAnimations();
+            updateCamera();
+            updateUI();
+            updateGameplayMessages();
+            checkFriendCallout(gameState.rob);
+            checkFriendCallout(gameState.tris);
+            updateNPCWandering();
+        }
+        
+        draw();
+        requestAnimationFrame(gameLoop);
+    } catch (error) {
+        console.error("Error in gameLoop:", error.stack);
+        setTimeout(() => requestAnimationFrame(gameLoop), 100);
+    }
+}
+
+// --- Event Listeners and Init ---
+function setupEventListeners() {
+    const tabCraft = document.getElementById('tabCraft');
+    const tabBasic = document.getElementById('tabBasic');
+    const craftingContent = document.getElementById('craftingContent');
+    const basicActionsContent = document.getElementById('basicActionsContent');
+
+    tabCraft.addEventListener('click', () => {
+        tabCraft.classList.add('active'); tabBasic.classList.remove('active');
+        craftingContent.classList.remove('hidden-tab'); basicActionsContent.classList.add('hidden-tab');
+    });
+    tabBasic.addEventListener('click', () => {
+        tabBasic.classList.add('active'); tabCraft.classList.remove('active');
+        basicActionsContent.classList.remove('hidden-tab'); craftingContent.classList.add('hidden-tab');
+    });
+    
+    window.addEventListener('keydown', (e) => {
+        keysPressed[e.key] = true;
+        if(e.key === ' '){ e.preventDefault(); interact(); }
+        if(e.key === 'm' || e.key === 'M'){ e.preventDefault(); toggleMiniMapFullscreen(); }
+    });
+     window.addEventListener('keyup', (e) => { keysPressed[e.key] = false; });
+
+    document.getElementById('card1').addEventListener('click', () => { if (gameState.levelUpCards.visible) selectLevelUpCard(0); });
+    document.getElementById('card2').addEventListener('click', () => { if (gameState.levelUpCards.visible) selectLevelUpCard(1); });
+    document.getElementById('card3').addEventListener('click', () => { if (gameState.levelUpCards.visible) selectLevelUpCard(2); });
+
+    document.getElementById('craftAxe').addEventListener('click', () => { if (gameState.inventory.wood >= 15 && !gameState.tools.axe) { gameState.inventory.wood -= 15; gameState.tools.axe = true; logMessage('Crafted a wooden axe!', '#98c379'); } });
+    document.getElementById('craftPickaxe').addEventListener('click', () => { if (gameState.inventory.wood >= 20 && !gameState.tools.pickaxe) { gameState.inventory.wood -= 20; gameState.tools.pickaxe = true; logMessage('Crafted a wooden pickaxe!', '#98c379'); } });
+    document.getElementById('craftSword').addEventListener('click', () => { if (gameState.inventory.wood >= 25 && !gameState.tools.sword) { gameState.inventory.wood -= 25; gameState.tools.sword = true; logMessage('Crafted a wooden sword!', '#98c379'); } });
+    document.getElementById('craftCarvedStone').addEventListener('click', () => { if (gameState.inventory.stone >= 50) { gameState.inventory.stone -= 50; gameState.inventory.carvedStone++; logMessage('Carved a stone effigy.', '#c7c7c7'); } });
+    document.getElementById('craftCampfire').addEventListener('click', () => {
+        if (gameState.inventory.wood >= 15 && gameState.inventory.stone >= 5) {
+            const target = getTileInFront();
+            if (target.y<0||target.y>=MAP_SIZE||target.x<0||target.x>=MAP_SIZE) { logMessage('Cannot build there.', '#e06c75'); return; }
+            if (gameState.world[target.y][target.x] === TILES.GRASS) {
+                gameState.inventory.wood -= 15; gameState.inventory.stone -= 5;
+                gameState.world[target.y][target.x] = TILES.CAMPFIRE;
+                gameState.placedObjects[`${target.x},${target.y}`] = { x: target.x, y: target.y, type: TILES.CAMPFIRE };
+                logMessage('Built a warm campfire.', '#e5c07b');
+            } else { logMessage('Can only build on clear grass.', '#e06c75'); }
+        }
+    });
+    document.getElementById('craftFlint').addEventListener('click', () => { if (gameState.inventory.stone >= 10) { gameState.inventory.stone -= 10; gameState.inventory.flint += 1; logMessage('Crafted flint.', '#e5c07b'); } });
+    document.getElementById('craftSteel').addEventListener('click', () => { if (gameState.inventory.ore >= 5) { gameState.inventory.ore -= 5; gameState.inventory.steel += 1; logMessage('Forged steel.', '#e5c07b'); } });
+    document.getElementById('craftTent').addEventListener('click', () => {
+        if (gameState.inventory.wood >= 20 && gameState.inventory.stone >= 10) {
+            const target = getTileInFront();
+            if (target.y<0||target.y>=MAP_SIZE||target.x<0||target.x>=MAP_SIZE) { logMessage('Cannot build there.', '#e06c75'); return; }
+            if (gameState.world[target.y][target.x] === TILES.GRASS) {
+                gameState.inventory.wood -= 20; gameState.inventory.stone -= 10;
+                gameState.world[target.y][target.x] = TILES.TENT;
+                gameState.placedObjects[`${target.x},${target.y}`] = { x: target.x, y: target.y, type: TILES.TENT };
+                logMessage('Built a tent. Sleep in it at night.', '#a0522d');
+            } else { logMessage('Can only build on clear grass.', '#e06c75'); }
+        }
+    });
+
+    document.getElementById('eatBerry').addEventListener('click', () => { if (gameState.inventory.berries > 0) { gameState.inventory.berries--; gameState.player.hunger = Math.min(100, gameState.player.hunger + 10); logMessage("Ate a berry. (+10 Hunger)", "#c56183"); } });
+    document.getElementById('eatCookedMeat').addEventListener('click', () => { if (gameState.inventory.cookedMeat > 0) { gameState.inventory.cookedMeat--; gameState.player.hunger = Math.min(100, gameState.player.hunger + 40); gameState.player.health = Math.min(100, gameState.player.health + 10); logMessage("Ate cooked meat. (+40 Hunger, +10 Health)", "#e5c07b"); } });
+    document.getElementById('cookMeat').addEventListener('click', () => { if (gameState.inventory.rawMeat > 0 && isNearCampfire(gameState.player.x, gameState.player.y)) { gameState.inventory.rawMeat--; gameState.inventory.cookedMeat++; logMessage("Cooked some meat.", "#e5c07b"); } });
+    
+    window.addEventListener('resize', resizeCanvas);
+    canvas.addEventListener('click', () => canvas.focus());
+    canvas.addEventListener('keydown', (e) => { keysPressed[e.key] = true; if(e.key===' '||e.key==='m'||e.key==='M') e.preventDefault(); });
+    canvas.addEventListener('keyup', (e) => { keysPressed[e.key] = false; });
+    window.addEventListener('focus', () => { windowHasFocus = true; canvas.focus(); keysPressed = {}; });
+    window.addEventListener('blur', () => { windowHasFocus = false; keysPressed = {}; });
+    
+    miniMap.addEventListener('click', (e) => {
+        if (!gameState.miniMapFullscreen) return;
+        const rect = miniMap.getBoundingClientRect();
+        const minDimension = Math.min(canvas.clientWidth, canvas.clientHeight);
+        const scale = (Math.floor(minDimension * 0.8) * 2) / MAP_SIZE;
+        const worldX = Math.floor((e.clientX-rect.left)/scale); const worldY = Math.floor((e.clientY-rect.top)/scale);
+        if (worldX>=0&&worldX<MAP_SIZE&&worldY>=0&&worldY<MAP_SIZE) {
+            gameState.camera.x = worldX*TILE_SIZE - canvas.width/2 + TILE_SIZE/2;
+            gameState.camera.y = worldY*TILE_SIZE - canvas.height/2 + TILE_SIZE/2;
+            const maxX = MAP_SIZE*TILE_SIZE-canvas.width; const maxY = MAP_SIZE*TILE_SIZE-canvas.height;
+            gameState.camera.x=Math.max(0,Math.min(gameState.camera.x,maxX)); gameState.camera.y=Math.max(0,Math.min(gameState.camera.y,maxY));
+        }
+        gameState.miniMapFullscreen = false; updateMiniMapDisplay();
+    });
+    
+    const chatHistoryButton = document.getElementById('chatHistoryButton');
+    const chatHistoryModal = document.getElementById('chatHistoryModal');
+    const closeChatHistory = document.getElementById('closeChatHistory');
+    const chatHistoryContent = document.getElementById('chatHistoryContent');
+    chatHistoryButton.addEventListener('click', () => {
+        chatHistoryContent.innerHTML = '';
+        gameState.gameplayMessages.forEach(msg => {
+            const div = document.createElement('div');
+            div.textContent = `> ${msg.message}`;
+            div.style.color = msg.color;
+            div.style.marginBottom = '4px';
+            chatHistoryContent.appendChild(div);
+        });
+        chatHistoryModal.classList.remove('hidden');
+    });
+    closeChatHistory.addEventListener('click', () => chatHistoryModal.classList.add('hidden'));
+    chatHistoryModal.addEventListener('click', (e) => { if(e.target===chatHistoryModal) chatHistoryModal.classList.add('hidden'); });
+    
+    const backpackButton = document.getElementById('backpackButton');
+    const backpackModal = document.getElementById('backpackModal');
+    const closeBackpack = document.getElementById('closeBackpack');
+    backpackButton.addEventListener('click', () => { updateBackpack(); backpackModal.classList.remove('hidden'); });
+    closeBackpack.addEventListener('click', () => backpackModal.classList.add('hidden'));
+    backpackModal.addEventListener('click', (e) => { if (e.target===backpackModal) backpackModal.classList.add('hidden'); });
+}
+
+function resizeCanvas() { 
+    const parent = canvas.parentElement; 
+    canvas.width = parent.clientWidth; canvas.height = parent.clientHeight;
+    viewportTileCountX = Math.ceil(canvas.width / TILE_SIZE);
+    viewportTileCountY = Math.ceil(canvas.height / TILE_SIZE);
+    if (miniMapCanvas && miniMapCtx) drawMiniMap();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    try {
+        const startButton = document.getElementById('startButton');
+        let selectedCharacter = null;
+        document.querySelectorAll('.character-card').forEach((card, index) => {
+            card.addEventListener('click', () => {
+                document.querySelectorAll('.character-card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                selectedCharacter = ['dave', 'rob', 'tris'][index];
+                startButton.classList.remove('hidden');
+            });
+        });
+        
+        startButton.addEventListener('click', () => {
+            if (!selectedCharacter) return;
+            introScreen.classList.add('hidden');
+            gameState.paused = false;
+            logMessage("Find your missing friends and light three bonfires to signal for rescue.", "#f6e05e");
+        });
+        
+        generateWorld();
+        spawnInitialAnimals();
+        resizeCanvas();
+        setupEventListeners();
+        initMiniMap();
+        updateMiniMapDisplay();
+        requestAnimationFrame(gameLoop);
+        setTimeout(() => canvas.focus(), 100);
+    } catch (error) {
+        console.error("Error during game initialization:", error.stack);
+        alert("Game failed to initialize. Check console and refresh.");
+    }
+});
+
+</script>
+</body>
+</html>
+
