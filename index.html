@@ -1365,7 +1365,7 @@ function handleInput() {
                 !isPositionOccupied(newX, newY)) {
                 player.x = newX;
                 player.y = newY;
-                player.moveCooldown = 5;
+                player.moveCooldown = 12;
                 depleteEnergy(0.2 / 12);
             }
         }
@@ -1953,13 +1953,38 @@ function loadSprite(name, path) {
 // Load all sprites
 function loadAllSprites() {
     const sprites = [
-        // Characters
+        // Tris character sprites - rotations
+        { name: 'tris_north', path: 'sprites/characters/tris/rotations/north.png' },
+        { name: 'tris_south', path: 'sprites/characters/tris/rotations/south.png' },
+        { name: 'tris_east', path: 'sprites/characters/tris/rotations/east.png' },
+        { name: 'tris_west', path: 'sprites/characters/tris/rotations/west.png' },
+        { name: 'tris_north_east', path: 'sprites/characters/tris/rotations/north-east.png' },
+        { name: 'tris_north_west', path: 'sprites/characters/tris/rotations/north-west.png' },
+        { name: 'tris_south_east', path: 'sprites/characters/tris/rotations/south-east.png' },
+        { name: 'tris_south_west', path: 'sprites/characters/tris/rotations/south-west.png' },
+        
+        // Tris walk animations
+        { name: 'tris_walk_north', path: 'sprites/characters/tris/animations/walk/north/frame_000.png' },
+        { name: 'tris_walk_south', path: 'sprites/characters/tris/animations/walk/south/frame_000.png' },
+        { name: 'tris_walk_east', path: 'sprites/characters/tris/animations/walk/east/frame_000.png' },
+        { name: 'tris_walk_west', path: 'sprites/characters/tris/animations/walk/west/frame_000.png' },
+        
+        // Tris attack animations (cross-punch for mining/attacking)
+        { name: 'tris_attack_north', path: 'sprites/characters/tris/animations/cross-punch/north/frame_000.png' },
+        { name: 'tris_attack_south', path: 'sprites/characters/tris/animations/cross-punch/south/frame_000.png' },
+        { name: 'tris_attack_east', path: 'sprites/characters/tris/animations/cross-punch/east/frame_000.png' },
+        { name: 'tris_attack_west', path: 'sprites/characters/tris/animations/cross-punch/west/frame_000.png' },
+        
+        // Tris breathing-idle animations (for standing/idle)
+        { name: 'tris_idle_north', path: 'sprites/characters/tris/animations/breathing-idle/north/frame_000.png' },
+        { name: 'tris_idle_south', path: 'sprites/characters/tris/animations/breathing-idle/south/frame_000.png' },
+        { name: 'tris_idle_east', path: 'sprites/characters/tris/animations/breathing-idle/east/frame_000.png' },
+        { name: 'tris_idle_west', path: 'sprites/characters/tris/animations/breathing-idle/west/frame_000.png' },
+        
+        // Other characters (fallback)
         { name: 'dave_down', path: 'sprites/characters/dave_down.png' },
-        { name: 'dave_up', path: 'sprites/characters/dave_up.png' },
-        { name: 'dave_left', path: 'sprites/characters/dave_left.png' },
-        { name: 'dave_right', path: 'sprites/characters/dave_right.png' },
         { name: 'rob_down', path: 'sprites/characters/rob_down.png' },
-        { name: 'tris_down', path: 'sprites/characters/tris_down.png' },
+        
         // Animals
         { name: 'bear', path: 'sprites/animals/bear.png' },
         { name: 'wolf', path: 'sprites/animals/wolf.png' },
@@ -1972,23 +1997,37 @@ function loadAllSprites() {
     return Promise.all(spritePromises);
 }
 
-function drawPlayerSprite(x, y, frame) { // Dave, The Seeker (Player)
-    // Determine which sprite to use based on character and direction
-    let spriteName = 'dave_down'; // Default
+function drawPlayerSprite(x, y, frame) { // Tris, The Engineer (Player)
+    // Determine which Tris sprite to use based on direction and action
+    let spriteName = 'tris_south'; // Default
     
-    if (frame.includes('up')) spriteName = 'dave_up';
-    else if (frame.includes('left')) spriteName = 'dave_left';
-    else if (frame.includes('right')) spriteName = 'dave_right';
-    else if (frame.includes('down')) spriteName = 'dave_down';
+    // Determine direction
+    let direction = 'south';
+    if (frame.includes('up')) direction = 'north';
+    else if (frame.includes('down')) direction = 'south';
+    else if (frame.includes('left')) direction = 'west';
+    else if (frame.includes('right')) direction = 'east';
+    
+    // Determine action
+    if (frame.includes('using_axe') || frame.includes('using_pickaxe') || frame.includes('using_sword')) {
+        // Attack/mining animation
+        spriteName = `tris_attack_${direction}`;
+    } else if (frame.includes('walking')) {
+        // Walking animation
+        spriteName = `tris_walk_${direction}`;
+    } else {
+        // Standing/idle - use breathing-idle animation
+        spriteName = `tris_idle_${direction}`;
+    }
     
     // Check if sprite is loaded
     if (spriteImages[spriteName]) {
         ctx.drawImage(spriteImages[spriteName], x, y, TILE_SIZE, TILE_SIZE);
     } else {
         // Fallback to simple colored rectangle if sprite not loaded
-        ctx.fillStyle = '#4a5d7e';
+        ctx.fillStyle = '#4a5d2a'; // Tris's cloak color
         ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-        ctx.fillStyle = '#8b4513';
+        ctx.fillStyle = '#8b4513'; // Brown pants
         ctx.fillRect(x + 8, y + 8, TILE_SIZE - 16, TILE_SIZE - 16);
     }
 }
@@ -2395,7 +2434,7 @@ function draw() {
     const px = x * TILE_SIZE; const py = y * TILE_SIZE;
     let frame;
     if (gameState.playerAnimation.toolSwing > 0) {
-        frame = `using_axe_${direction}`; // Simplified for now
+        frame = `using_axe_${direction}`; // This will trigger cross-punch animation
     } else if (isMoving) {
         frame = `walking_${direction}`;
     } else {
@@ -2658,7 +2697,7 @@ function resizeCanvas() {
 
 document.addEventListener('DOMContentLoaded', function() {
     try {
-        // Load all sprites
+        // Load all sprites - Updated sprite paths v3 (added breathing-idle)
         loadAllSprites().then(() => {
             console.log('All sprites loaded successfully');
         }).catch(error => {
