@@ -436,9 +436,10 @@ const TILES = {
     MOUNTAIN: 13,
     ROB: 15, // Friend 1
     TRIS: 16, // Friend 2
-    RABBIT: 17,
-    DEER: 18,
-    SQUIRREL: 19,
+    WIZARD: 17, // The Mystic
+    RABBIT: 18,
+    DEER: 19,
+    SQUIRREL: 20,
 };
 
 const TILE_COLORS = {
@@ -546,6 +547,20 @@ let gameState = {
         calloutMessages: [ "Is that you?", "Thank goodness!", "I had an idea...", "Let's get to work." ],
         adviceMessages: [ "With enough wood and stone, we can build anything.", "A campfire will keep the beasts away at night.", "We need better tools to be efficient." ],
         itemOffers: [ { item: 'wood', amount: 10, message: "I gathered some wood. Let's build something." }, { item: 'herbs', amount: 2, message: "These herbs might be useful." } ]
+    },
+    wizard: { // The Mystic
+        x: 0,
+        y: 0,
+        direction: 'down',
+        isMoving: false,
+        walkCycle: 0,
+        lastInteraction: 0,
+        following: false,
+        wandering: { isWandering: true, pauseTimer: 0, targetX: 0, targetY: 0, moveCooldown: 0 },
+        speechBubble: { visible: false, message: '', timer: 0, maxTimer: 180 },
+        calloutMessages: [ "Ah, a fellow survivor!", "The magic in this place is... unusual.", "I sense great potential in you.", "Let me share my knowledge." ],
+        adviceMessages: [ "The ancient magic here can enhance your abilities.", "These crystals hold mysterious power.", "Trust in the mystical forces around us.", "Magic and technology can work together." ],
+        itemOffers: [ { item: 'crystal', amount: 3, message: "These crystals will enhance your abilities." }, { item: 'potion', amount: 1, message: "A healing potion for your journey." } ]
     },
     newAnimals: {
         rabbits: [],
@@ -699,6 +714,7 @@ function isPositionOccupied(x, y, excludeEntity = null) {
     if (gameState.player.x === x && gameState.player.y === y) return true;
     if (excludeEntity !== gameState.rob && gameState.rob.x === x && gameState.rob.y === y) return true;
     if (excludeEntity !== gameState.tris && gameState.tris.x === x && gameState.tris.y === y) return true;
+    if (excludeEntity !== gameState.wizard && gameState.wizard.x === x && gameState.wizard.y === y) return true;
     return gameState.animals.some(animal => animal.x === x && animal.y === y);
 }
 
@@ -717,6 +733,14 @@ function updateNPCWandering() {
         checkNPCHelpWithBonfires(gameState.tris, 'Tris');
     } else {
         updateNPCWanderingFor(gameState.tris);
+    }
+    
+    // Update Wizard (The Mystic)
+    if (gameState.wizard.following) {
+        updateNPCFollowing(gameState.wizard);
+        checkNPCHelpWithBonfires(gameState.wizard, 'Wizard');
+    } else {
+        updateNPCWanderingFor(gameState.wizard);
     }
 }
 
@@ -877,6 +901,10 @@ function updateNPCWanderingFor(npc) {
                 else if (moveX < 0) npc.direction = 'left';
                 else if (moveY > 0) npc.direction = 'down';
                 else if (moveY < 0) npc.direction = 'up';
+                
+                // Store movement direction for sprite orientation
+                npc.lastMoveX = moveX;
+                npc.lastMoveY = moveY;
                 
                 wandering.moveCooldown = 15 + Math.floor(Math.random() * 10);
             }
@@ -1080,6 +1108,20 @@ function generateWorld() {
             gameState.tris.y = tile.y;
             trisPlaced = true;
             logMessage("Another voice, calm and steady, echoes through the forest...", "#228b22");
+        }
+    }
+    
+    // Place Wizard NPC (close to player for testing)
+    let wizardPlaced = false;
+    for(let i = 0; i < grassTiles.length && !wizardPlaced; i++) {
+        const tile = grassTiles[i];
+        const distToPlayer = Math.sqrt(Math.pow(tile.x - gameState.player.x, 2) + Math.pow(tile.y - gameState.player.y, 2));
+        if(distToPlayer > 3 && distToPlayer < 8) { // Close to player for testing
+            gameState.world[tile.y][tile.x] = TILES.WIZARD;
+            gameState.wizard.x = tile.x;
+            gameState.wizard.y = tile.y;
+            wizardPlaced = true;
+            logMessage("A mysterious energy pulses through the air nearby...", "#9370db");
         }
     }
     
@@ -1296,6 +1338,32 @@ function interact() {
             }
             break;
         }
+        case TILES.WIZARD: { // Interaction with Wizard
+            const now = Date.now();
+            if (now - gameState.wizard.lastInteraction > 5000) {
+                gameState.wizard.lastInteraction = now;
+                if (!gameState.wizard.following) {
+                    logMessage("You: 'Follow me!'", '#61afef');
+                    gameState.wizard.following = true;
+                    gameState.wizard.wandering.isWandering = false;
+                    logMessage("Wizard: 'Ah, a fellow survivor! The mystical forces have brought us together.'", '#9370db');
+                    gameState.quest.friendsFound++;
+                    updateQuestLog();
+                } else {
+                    logMessage(`Wizard: "${gameState.wizard.adviceMessages[Math.floor(Math.random() * gameState.wizard.adviceMessages.length)]}"`, '#9370db');
+                }
+                gameState.xp += 1;
+                logMessage("You feel more mystical. (+1 XP)", '#9370db');
+                if (Math.random() < 0.4) {
+                    const offer = gameState.wizard.itemOffers[Math.floor(Math.random() * gameState.wizard.itemOffers.length)];
+                    gameState.inventory[offer.item] += offer.amount;
+                    logMessage(`Wizard offers you a magical item: "${offer.message}"`, '#61afef');
+                    gameState.xp += 2;
+                }
+                checkLevelUp();
+            }
+            break;
+        }
     }
     
     if (interactionDidDamage) {
@@ -1386,6 +1454,7 @@ function updateAnimations() {
     if (playerAnimation.toolSwing > 0) playerAnimation.toolSwing--;
     if (gameState.rob.isMoving) gameState.rob.walkCycle = (gameState.rob.walkCycle + 0.2) % (Math.PI * 2);
     if (gameState.tris.isMoving) gameState.tris.walkCycle = (gameState.tris.walkCycle + 0.2) % (Math.PI * 2);
+    if (gameState.wizard.isMoving) gameState.wizard.walkCycle = (gameState.wizard.walkCycle + 0.2) % (Math.PI * 2);
 }
 
 function gameOver(reason) {
@@ -2087,6 +2156,16 @@ function loadAllSprites() {
         { name: 'grey_wolf_attack_east', path: 'sprites/animals/grey_wolf/animations/cross-punch/east/frame_000.png' },
         { name: 'grey_wolf_attack_west', path: 'sprites/animals/grey_wolf/animations/cross-punch/west/frame_000.png' },
         
+        // Wizard NPC sprites
+        { name: 'wizard_north', path: 'sprites/characters/wizard/rotations/north.png' },
+        { name: 'wizard_south', path: 'sprites/characters/wizard/rotations/south.png' },
+        { name: 'wizard_east', path: 'sprites/characters/wizard/rotations/east.png' },
+        { name: 'wizard_west', path: 'sprites/characters/wizard/rotations/west.png' },
+        { name: 'wizard_north_east', path: 'sprites/characters/wizard/rotations/north-east.png' },
+        { name: 'wizard_north_west', path: 'sprites/characters/wizard/rotations/north-west.png' },
+        { name: 'wizard_south_east', path: 'sprites/characters/wizard/rotations/south-east.png' },
+        { name: 'wizard_south_west', path: 'sprites/characters/wizard/rotations/south-west.png' },
+        
         // Other characters (fallback)
         { name: 'dave_down', path: 'sprites/characters/dave_down.png' },
         { name: 'rob_down', path: 'sprites/characters/rob_down.png' },
@@ -2583,6 +2662,37 @@ function draw() {
         drawTrisSprite(trisX, trisY, `standing_down`);
     }
     if(gameState.tris.speechBubble.visible) drawSpeechBubble(trisX, trisY, gameState.tris.speechBubble.message);
+    
+    // Draw Wizard with 2x scaling
+    const wizardX = gameState.wizard.x * TILE_SIZE;
+    const wizardY = gameState.wizard.y * TILE_SIZE;
+    
+    // Determine wizard direction based on movement or default to south
+    let wizardDirection = 'south';
+    if (gameState.wizard.lastMoveX !== undefined && gameState.wizard.lastMoveY !== undefined) {
+        const dx = gameState.wizard.lastMoveX;
+        const dy = gameState.wizard.lastMoveY;
+        if (dx > 0 && dy === 0) wizardDirection = 'east';
+        else if (dx < 0 && dy === 0) wizardDirection = 'west';
+        else if (dx === 0 && dy < 0) wizardDirection = 'north';
+        else if (dx > 0 && dy < 0) wizardDirection = 'north_east';
+        else if (dx < 0 && dy < 0) wizardDirection = 'north_west';
+        else if (dx > 0 && dy > 0) wizardDirection = 'south_east';
+        else if (dx < 0 && dy > 0) wizardDirection = 'south_west';
+    }
+    
+    if (spriteImages[`wizard_${wizardDirection}`]) {
+        const scale = 2.0;
+        const scaledSize = TILE_SIZE * scale;
+        const offsetX = wizardX - (scaledSize - TILE_SIZE) / 2;
+        const offsetY = wizardY - (scaledSize - TILE_SIZE) / 2;
+        ctx.drawImage(spriteImages[`wizard_${wizardDirection}`], offsetX, offsetY, scaledSize, scaledSize);
+    } else {
+        // Fallback to a simple colored rectangle if sprite not loaded
+        ctx.fillStyle = '#9370db';
+        ctx.fillRect(wizardX, wizardY, TILE_SIZE, TILE_SIZE);
+    }
+    if(gameState.wizard.speechBubble.visible) drawSpeechBubble(wizardX, wizardY, gameState.wizard.speechBubble.message);
 
     // Draw animals and their health bars
     gameState.animals.forEach(animal => {
@@ -2745,6 +2855,7 @@ function gameLoop(timestamp) {
             updateGameplayMessages();
             checkFriendCallout(gameState.rob);
             checkFriendCallout(gameState.tris);
+            checkFriendCallout(gameState.wizard);
             updateNPCWandering();
         }
         
