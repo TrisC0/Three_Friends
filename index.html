@@ -558,7 +558,7 @@ let gameState = {
         following: false,
         wandering: { isWandering: true, pauseTimer: 0, targetX: 0, targetY: 0, moveCooldown: 0 },
         speechBubble: { visible: false, message: '', timer: 0, maxTimer: 180 },
-        calloutMessages: [ "Ah, a fellow survivor!", "The magic in this place is... unusual.", "I sense great potential in you.", "Let me share my knowledge." ],
+        calloutMessages: [ "The ancient magic calls to you.", "I sense powerful energy nearby.", "The mystical forces are strong here.", "Let me share my wisdom with you.", "I'm a Wizard, Gary!" ],
         adviceMessages: [ "The ancient magic here can enhance your abilities.", "These crystals hold mysterious power.", "Trust in the mystical forces around us.", "Magic and technology can work together." ],
         itemOffers: [ { item: 'crystal', amount: 3, message: "These crystals will enhance your abilities." }, { item: 'potion', amount: 1, message: "A healing potion for your journey." } ]
     },
@@ -741,6 +741,63 @@ function updateNPCWandering() {
         checkNPCHelpWithBonfires(gameState.wizard, 'Wizard');
     } else {
         updateNPCWanderingFor(gameState.wizard);
+    }
+    
+    // Make NPCs face the player when close
+    updateNPCDirections();
+}
+
+function updateNPCDirections() {
+    const playerX = gameState.player.x;
+    const playerY = gameState.player.y;
+    const closeDistance = 3; // NPCs will face player when within 3 tiles
+    
+    // Update Rob's direction
+    const robDistance = Math.sqrt(Math.pow(gameState.rob.x - playerX, 2) + Math.pow(gameState.rob.y - playerY, 2));
+    if (robDistance <= closeDistance) {
+        const dx = playerX - gameState.rob.x;
+        const dy = playerY - gameState.rob.y;
+        
+        if (dx > 0 && dy === 0) gameState.rob.direction = 'right';
+        else if (dx < 0 && dy === 0) gameState.rob.direction = 'left';
+        else if (dx === 0 && dy < 0) gameState.rob.direction = 'up';
+        else if (dx === 0 && dy > 0) gameState.rob.direction = 'down';
+        else if (dx > 0 && dy < 0) gameState.rob.direction = 'up_right';
+        else if (dx < 0 && dy < 0) gameState.rob.direction = 'up_left';
+        else if (dx > 0 && dy > 0) gameState.rob.direction = 'down_right';
+        else if (dx < 0 && dy > 0) gameState.rob.direction = 'down_left';
+    }
+    
+    // Update Tris's direction
+    const trisDistance = Math.sqrt(Math.pow(gameState.tris.x - playerX, 2) + Math.pow(gameState.tris.y - playerY, 2));
+    if (trisDistance <= closeDistance) {
+        const dx = playerX - gameState.tris.x;
+        const dy = playerY - gameState.tris.y;
+        
+        if (dx > 0 && dy === 0) gameState.tris.direction = 'right';
+        else if (dx < 0 && dy === 0) gameState.tris.direction = 'left';
+        else if (dx === 0 && dy < 0) gameState.tris.direction = 'up';
+        else if (dx === 0 && dy > 0) gameState.tris.direction = 'down';
+        else if (dx > 0 && dy < 0) gameState.tris.direction = 'up_right';
+        else if (dx < 0 && dy < 0) gameState.tris.direction = 'up_left';
+        else if (dx > 0 && dy > 0) gameState.tris.direction = 'down_right';
+        else if (dx < 0 && dy > 0) gameState.tris.direction = 'down_left';
+    }
+    
+    // Update Wizard's direction
+    const wizardDistance = Math.sqrt(Math.pow(gameState.wizard.x - playerX, 2) + Math.pow(gameState.wizard.y - playerY, 2));
+    if (wizardDistance <= closeDistance) {
+        const dx = playerX - gameState.wizard.x;
+        const dy = playerY - gameState.wizard.y;
+        
+        if (dx > 0 && dy === 0) gameState.wizard.direction = 'right';
+        else if (dx < 0 && dy === 0) gameState.wizard.direction = 'left';
+        else if (dx === 0 && dy < 0) gameState.wizard.direction = 'up';
+        else if (dx === 0 && dy > 0) gameState.wizard.direction = 'down';
+        else if (dx > 0 && dy < 0) gameState.wizard.direction = 'up_right';
+        else if (dx < 0 && dy < 0) gameState.wizard.direction = 'up_left';
+        else if (dx > 0 && dy > 0) gameState.wizard.direction = 'down_right';
+        else if (dx < 0 && dy > 0) gameState.wizard.direction = 'down_left';
     }
 }
 
@@ -1346,7 +1403,7 @@ function interact() {
                     logMessage("You: 'Follow me!'", '#61afef');
                     gameState.wizard.following = true;
                     gameState.wizard.wandering.isWandering = false;
-                    logMessage("Wizard: 'Ah, a fellow survivor! The mystical forces have brought us together.'", '#9370db');
+                    logMessage("Wizard: 'The mystical forces have brought us together. I sense great magical potential within you.'", '#9370db');
                     gameState.quest.friendsFound++;
                     updateQuestLog();
                 } else {
@@ -1576,6 +1633,60 @@ function spawnInitialAnimals() {
             
             gameState.animals.push(testWolf);
             logMessage("A grey wolf appears nearby for testing!", '#696969');
+        }
+        
+        // Spawn a test white rabbit near the player
+        const rabbitX = playerX + Math.floor(Math.random() * 5) - 2; // Within 2 tiles
+        const rabbitY = playerY + Math.floor(Math.random() * 5) - 2; // Within 2 tiles
+        
+        if (rabbitX >= 0 && rabbitX < MAP_SIZE && rabbitY >= 0 && rabbitY < MAP_SIZE && 
+            gameState.world[rabbitY][rabbitX] === TILES.GRASS && !isPositionOccupied(rabbitX, rabbitY)) {
+            
+            const testRabbit = {
+                x: rabbitX,
+                y: rabbitY,
+                type: 'rabbit',
+                hp: 5,
+                maxHp: 5,
+                state: 'wander',
+                wanderTarget: { x: null, y: null },
+                isMoving: false,
+                direction: 'down',
+                walkCycle: 0,
+                lastHitTimer: 0,
+                lastMoveX: 0,
+                lastMoveY: 1
+            };
+            
+            gameState.animals.push(testRabbit);
+            logMessage("A white rabbit appears nearby for testing!", '#ffffff');
+        }
+        
+        // Spawn a test grey squirrel near the player
+        const squirrelX = playerX + Math.floor(Math.random() * 5) - 2; // Within 2 tiles
+        const squirrelY = playerY + Math.floor(Math.random() * 5) - 2; // Within 2 tiles
+        
+        if (squirrelX >= 0 && squirrelX < MAP_SIZE && squirrelY >= 0 && squirrelY < MAP_SIZE && 
+            gameState.world[squirrelY][squirrelX] === TILES.GRASS && !isPositionOccupied(squirrelX, squirrelY)) {
+            
+            const testSquirrel = {
+                x: squirrelX,
+                y: squirrelY,
+                type: 'squirrel',
+                hp: 3,
+                maxHp: 3,
+                state: 'wander',
+                wanderTarget: { x: null, y: null },
+                isMoving: false,
+                direction: 'down',
+                walkCycle: 0,
+                lastHitTimer: 0,
+                lastMoveX: 0,
+                lastMoveY: 1
+            };
+            
+            gameState.animals.push(testSquirrel);
+            logMessage("A grey squirrel appears nearby for testing!", '#808080');
         }
         
         logMessage(`The wilderness stirs with ${initialCount} creatures...`, '#e5c07b');
@@ -2156,6 +2267,38 @@ function loadAllSprites() {
         { name: 'grey_wolf_attack_east', path: 'sprites/animals/grey_wolf/animations/cross-punch/east/frame_000.png' },
         { name: 'grey_wolf_attack_west', path: 'sprites/animals/grey_wolf/animations/cross-punch/west/frame_000.png' },
         
+        // White Rabbit sprites
+        { name: 'white_rabbit_north', path: 'sprites/animals/white_rabbit/rotations/north.png' },
+        { name: 'white_rabbit_south', path: 'sprites/animals/white_rabbit/rotations/south.png' },
+        { name: 'white_rabbit_east', path: 'sprites/animals/white_rabbit/rotations/east.png' },
+        { name: 'white_rabbit_west', path: 'sprites/animals/white_rabbit/rotations/west.png' },
+        { name: 'white_rabbit_north_east', path: 'sprites/animals/white_rabbit/rotations/north-east.png' },
+        { name: 'white_rabbit_north_west', path: 'sprites/animals/white_rabbit/rotations/north-west.png' },
+        { name: 'white_rabbit_south_east', path: 'sprites/animals/white_rabbit/rotations/south-east.png' },
+        { name: 'white_rabbit_south_west', path: 'sprites/animals/white_rabbit/rotations/south-west.png' },
+        
+        // Grey Squirrel sprites
+        { name: 'grey_squirrel_north', path: 'sprites/animals/grey_squirrel/rotations/north.png' },
+        { name: 'grey_squirrel_south', path: 'sprites/animals/grey_squirrel/rotations/south.png' },
+        { name: 'grey_squirrel_east', path: 'sprites/animals/grey_squirrel/rotations/east.png' },
+        { name: 'grey_squirrel_west', path: 'sprites/animals/grey_squirrel/rotations/west.png' },
+        { name: 'grey_squirrel_north_east', path: 'sprites/animals/grey_squirrel/rotations/north-east.png' },
+        { name: 'grey_squirrel_north_west', path: 'sprites/animals/grey_squirrel/rotations/north-west.png' },
+        { name: 'grey_squirrel_south_east', path: 'sprites/animals/grey_squirrel/rotations/south-east.png' },
+        { name: 'grey_squirrel_south_west', path: 'sprites/animals/grey_squirrel/rotations/south-west.png' },
+        
+        // Grey Squirrel jump animations
+        { name: 'grey_squirrel_jump_north', path: 'sprites/animals/grey_squirrel/animations/jumping-1/north/frame_000.png' },
+        { name: 'grey_squirrel_jump_south', path: 'sprites/animals/grey_squirrel/animations/jumping-1/south/frame_000.png' },
+        { name: 'grey_squirrel_jump_east', path: 'sprites/animals/grey_squirrel/animations/jumping-1/east/frame_000.png' },
+        { name: 'grey_squirrel_jump_west', path: 'sprites/animals/grey_squirrel/animations/jumping-1/west/frame_000.png' },
+        
+        // Grey Squirrel punch animations
+        { name: 'grey_squirrel_punch_north', path: 'sprites/animals/grey_squirrel/animations/cross-punch/north/frame_000.png' },
+        { name: 'grey_squirrel_punch_south', path: 'sprites/animals/grey_squirrel/animations/cross-punch/south/frame_000.png' },
+        { name: 'grey_squirrel_punch_east', path: 'sprites/animals/grey_squirrel/animations/cross-punch/east/frame_000.png' },
+        { name: 'grey_squirrel_punch_west', path: 'sprites/animals/grey_squirrel/animations/cross-punch/west/frame_000.png' },
+        
         // Wizard NPC sprites
         { name: 'wizard_north', path: 'sprites/characters/wizard/rotations/north.png' },
         { name: 'wizard_south', path: 'sprites/characters/wizard/rotations/south.png' },
@@ -2647,7 +2790,7 @@ function draw() {
         const offsetY = robY - (scaledSize - TILE_SIZE) / 2;
         ctx.drawImage(spriteImages['rob_down'], offsetX, offsetY, scaledSize, scaledSize);
     } else {
-        drawRobSprite(robX, robY, `standing_down`);
+        drawRobSprite(robX, robY, `standing_${gameState.rob.direction}`);
     }
     if(gameState.rob.speechBubble.visible) drawSpeechBubble(robX, robY, gameState.rob.speechBubble.message);
     
@@ -2659,7 +2802,7 @@ function draw() {
         const offsetY = trisY - (scaledSize - TILE_SIZE) / 2;
         ctx.drawImage(spriteImages['tris_south'], offsetX, offsetY, scaledSize, scaledSize);
     } else {
-        drawTrisSprite(trisX, trisY, `standing_down`);
+        drawTrisSprite(trisX, trisY, `standing_${gameState.tris.direction}`);
     }
     if(gameState.tris.speechBubble.visible) drawSpeechBubble(trisX, trisY, gameState.tris.speechBubble.message);
     
@@ -2667,19 +2810,17 @@ function draw() {
     const wizardX = gameState.wizard.x * TILE_SIZE;
     const wizardY = gameState.wizard.y * TILE_SIZE;
     
-    // Determine wizard direction based on movement or default to south
-    let wizardDirection = 'south';
-    if (gameState.wizard.lastMoveX !== undefined && gameState.wizard.lastMoveY !== undefined) {
-        const dx = gameState.wizard.lastMoveX;
-        const dy = gameState.wizard.lastMoveY;
-        if (dx > 0 && dy === 0) wizardDirection = 'east';
-        else if (dx < 0 && dy === 0) wizardDirection = 'west';
-        else if (dx === 0 && dy < 0) wizardDirection = 'north';
-        else if (dx > 0 && dy < 0) wizardDirection = 'north_east';
-        else if (dx < 0 && dy < 0) wizardDirection = 'north_west';
-        else if (dx > 0 && dy > 0) wizardDirection = 'south_east';
-        else if (dx < 0 && dy > 0) wizardDirection = 'south_west';
-    }
+    // Use wizard's current direction and map to sprite naming
+    let wizardDirection = gameState.wizard.direction;
+    // Map direction names to sprite naming convention
+    if (wizardDirection === 'up') wizardDirection = 'north';
+    else if (wizardDirection === 'down') wizardDirection = 'south';
+    else if (wizardDirection === 'left') wizardDirection = 'west';
+    else if (wizardDirection === 'right') wizardDirection = 'east';
+    else if (wizardDirection === 'up_right') wizardDirection = 'north_east';
+    else if (wizardDirection === 'up_left') wizardDirection = 'north_west';
+    else if (wizardDirection === 'down_right') wizardDirection = 'south_east';
+    else if (wizardDirection === 'down_left') wizardDirection = 'south_west';
     
     if (spriteImages[`wizard_${wizardDirection}`]) {
         const scale = 2.0;
@@ -2755,6 +2896,71 @@ function draw() {
                 ctx.drawImage(spriteImages[wolfSpriteName], offsetX, offsetY, scaledSize, scaledSize);
             } else {
                 drawWolfSprite(ax, ay); // Fallback to pixel art
+            }
+        } else if (animal.type === 'rabbit') {
+            // Determine rabbit direction based on movement or default to south
+            let rabbitDirection = 'south';
+            if (animal.lastMoveX !== undefined && animal.lastMoveY !== undefined) {
+                if (animal.lastMoveY < 0) rabbitDirection = 'north';
+                else if (animal.lastMoveY > 0) rabbitDirection = 'south';
+                else if (animal.lastMoveX < 0) rabbitDirection = 'west';
+                else if (animal.lastMoveX > 0) rabbitDirection = 'east';
+            }
+            
+            const rabbitSpriteName = `white_rabbit_${rabbitDirection}`;
+            
+            if (spriteImages[rabbitSpriteName]) {
+                // Draw rabbit at 2x scale to match player
+                const scale = 2.0;
+                const scaledSize = TILE_SIZE * scale;
+                const offsetX = ax - (scaledSize - TILE_SIZE) / 2;
+                const offsetY = ay - (scaledSize - TILE_SIZE) / 2;
+                ctx.drawImage(spriteImages[rabbitSpriteName], offsetX, offsetY, scaledSize, scaledSize);
+            } else {
+                // Fallback to simple white circle
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.arc(ax + TILE_SIZE / 2, ay + TILE_SIZE / 2, TILE_SIZE / 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        } else if (animal.type === 'squirrel') {
+            // Determine squirrel direction based on movement or default to south
+            let squirrelDirection = 'south';
+            if (animal.lastMoveX !== undefined && animal.lastMoveY !== undefined) {
+                if (animal.lastMoveY < 0) squirrelDirection = 'north';
+                else if (animal.lastMoveY > 0) squirrelDirection = 'south';
+                else if (animal.lastMoveX < 0) squirrelDirection = 'west';
+                else if (animal.lastMoveX > 0) squirrelDirection = 'east';
+            }
+            
+            // Check if squirrel is attacking the player (same position)
+            const isAttacking = animal.x === gameState.player.x && animal.y === gameState.player.y;
+            let squirrelSpriteName;
+            
+            if (isAttacking) {
+                // Use punch animation when attacking
+                squirrelSpriteName = `grey_squirrel_punch_${squirrelDirection}`;
+            } else if (animal.isMoving) {
+                // Use jump animation when moving
+                squirrelSpriteName = `grey_squirrel_jump_${squirrelDirection}`;
+            } else {
+                // Use normal rotation sprite when idle
+                squirrelSpriteName = `grey_squirrel_${squirrelDirection}`;
+            }
+            
+            if (spriteImages[squirrelSpriteName]) {
+                // Draw squirrel at 2x scale to match player
+                const scale = 2.0;
+                const scaledSize = TILE_SIZE * scale;
+                const offsetX = ax - (scaledSize - TILE_SIZE) / 2;
+                const offsetY = ay - (scaledSize - TILE_SIZE) / 2;
+                ctx.drawImage(spriteImages[squirrelSpriteName], offsetX, offsetY, scaledSize, scaledSize);
+            } else {
+                // Fallback to simple grey circle
+                ctx.fillStyle = '#808080';
+                ctx.beginPath();
+                ctx.arc(ax + TILE_SIZE / 2, ay + TILE_SIZE / 2, TILE_SIZE / 3, 0, Math.PI * 2);
+                ctx.fill();
             }
         } else {
             // Fallback for other animal types
